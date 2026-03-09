@@ -129,7 +129,7 @@ async def main():
         print("No bot tokens configured. Set TELEGRAM_BOT_TOKEN_JORDAN, etc. in .env")
         return
 
-    await run_all_bots(configs, client)
+    await run_all_bots(configs, client, persona_dirs=PERSONA_DIRS)
 
 
 if __name__ == "__main__":

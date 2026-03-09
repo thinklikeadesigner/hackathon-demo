@@ -8,7 +8,6 @@ The config is stored in the memory store alongside core memory,
 and travels with the Portable Memory Format export.
 """
 
-import json
 import logging
 
 logger = logging.getLogger(__name__)
@@ -46,7 +45,10 @@ DEFAULT_CONSENT = {
 VALID_LEVELS = {"owner_only", "public"}
 
 # Tags that override source-level consent to owner_only regardless
-SENSITIVE_TAGS = {"therapy", "anxiety", "mental_health", "finance", "salary", "debt"}
+SENSITIVE_TAGS = {
+    "therapy", "anxiety", "mental_health", "finance", "salary", "debt",
+    "health", "personal", "family", "relationship",
+}
 
 
 class ConsentConfig:
@@ -54,6 +56,7 @@ class ConsentConfig:
 
     def __init__(self, sources: dict[str, str] | None = None):
         self.sources = dict(DEFAULT_CONSENT)
+        self.dataset_license: dict | None = None  # upstream license constraints
         if sources:
             for source, level in sources.items():
                 if level in VALID_LEVELS:
@@ -77,7 +80,10 @@ class ConsentConfig:
         return self.get_level(source) == "public"
 
     def to_dict(self) -> dict:
-        return {"sources": self.sources}
+        d = {"sources": self.sources}
+        if self.dataset_license:
+            d["dataset_license"] = self.dataset_license
+        return d
 
     @classmethod
     def from_dict(cls, data: dict) -> "ConsentConfig":

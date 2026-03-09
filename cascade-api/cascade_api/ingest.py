@@ -1,4 +1,3 @@
-import asyncio
 import json
 import logging
 import random
@@ -6,7 +5,7 @@ from pathlib import Path
 
 from cascade_api.memory import MemoryClient
 from cascade_api.consent import ConsentConfig, set_consent
-from cascade_api.permissions import classify_sensitivity
+from cascade_api.permissions import classify_sensitivity, PRIVATE_SOURCES
 
 logger = logging.getLogger(__name__)
 
@@ -137,26 +136,45 @@ async def ingest_persona(
         if personality.get("communication_style"):
             await tenant.core.append("Personality", f"- Communication: {personality['communication_style']}")
 
-    # Load consent.json if present
+    # Load consent.json — the dataset provides a license-level consent file.
+    # We honor its constraints (allowed_uses, retention) and derive per-source
+    # sharing defaults from the actual data sources present in this persona.
     consent_path = persona_dir / "consent.json"
+    dataset_consent = None
     if consent_path.exists():
         with open(consent_path) as f:
-            consent_data = json.load(f)
-        # Map the hackathon consent format to our per-source config
-        # The dataset consent.json has allowed_uses/prohibited_uses (dataset license),
-        # but we can also look for per-source sharing preferences if present
-        source_consent = consent_data.get("sharing", {})
-        if source_consent:
-            config = ConsentConfig(sources=source_consent)
+            dataset_consent = json.load(f)
+        logger.info(
+            f"  Dataset consent: allowed_uses={dataset_consent.get('allowed_uses')}, "
+            f"retention={dataset_consent.get('retention')}"
+        )
+
+    # Build per-source consent from what sources this persona actually has.
+    # Sources with sensitive content default to owner_only; others to public.
+    sources_present: set[str] = set()
+    for record in records:
+        src = record.get("source", "")
+        if src:
+            sources_present.add(src)
+
+    source_consent: dict[str, str] = {}
+    for src in sources_present:
+        if src in PRIVATE_SOURCES:
+            source_consent[src] = "owner_only"
         else:
-            # Use defaults — the dataset consent.json is a dataset license,
-            # not a user sharing config. Apply sensible defaults.
-            config = ConsentConfig()
-        set_consent(tenant_id, config)
-        logger.info(f"  Loaded consent config for {tenant_id}")
-    else:
-        # No consent file — apply defaults
-        set_consent(tenant_id, ConsentConfig())
-        logger.info(f"  Applied default consent config for {tenant_id}")
+            source_consent[src] = "public"
+
+    config = ConsentConfig(sources=source_consent)
+
+    # Attach dataset-level metadata so it travels with the export
+    if dataset_consent:
+        config.dataset_license = {
+            "allowed_uses": dataset_consent.get("allowed_uses", []),
+            "prohibited_uses": dataset_consent.get("prohibited_uses", []),
+            "retention": dataset_consent.get("retention"),
+        }
+
+    set_consent(tenant_id, config)
+    logger.info(f"  Consent config for {tenant_id}: {len(sources_present)} sources configured")
 
     return stats
