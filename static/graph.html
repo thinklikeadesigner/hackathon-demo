@@ -180,6 +180,8 @@
 
   .panel-connection .dir { color: #555; flex-shrink: 0; }
   .panel-connection .rel { font-size: 8px; flex-shrink: 0; }
+  .panel-connection { cursor: pointer; border-radius: 3px; padding: 3px 4px; margin: 0 -4px; transition: background 0.15s; }
+  .panel-connection:hover { background: rgba(255,255,255,0.06); }
   .panel-connection .lbl { color: #aaa; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
   .panel-tags {
@@ -790,6 +792,63 @@ function handleClick(event, d) {
   }
 }
 
+function navigateToNode(nodeId) {
+  const node = graphData.nodes.find(n => n.id === nodeId);
+  if (!node) return;
+
+  selectedNode = nodeId;
+
+  // Trigger hover highlight on the target node
+  const connected = getConnected(nodeId);
+  nodeEls.select('.node-main')
+    .transition().duration(400)
+    .attr('opacity', n => connected.has(n.id) ? 1 : 0.08);
+  nodeEls.select('.node-ring')
+    .transition().duration(400)
+    .attr('stroke-opacity', n => connected.has(n.id) ? 0.5 : 0.03);
+  nodeEls.selectAll('.node-label')
+    .transition().duration(400)
+    .attr('opacity', n => connected.has(n.id) && n.connections >= 3 ? 0.9 : 0);
+  linkEls.transition().duration(400)
+    .attr('stroke-opacity', l => {
+      const sid = typeof l.source === 'object' ? l.source.id : l.source;
+      const tid = typeof l.target === 'object' ? l.target.id : l.target;
+      return (sid === nodeId || tid === nodeId) ? 1 : 0.03;
+    })
+    .attr('stroke-width', l => {
+      const sid = typeof l.source === 'object' ? l.source.id : l.source;
+      const tid = typeof l.target === 'object' ? l.target.id : l.target;
+      return (sid === nodeId || tid === nodeId) ? 2.5 : 0.5;
+    })
+    .attr('stroke', l => {
+      const sid = typeof l.source === 'object' ? l.source.id : l.source;
+      const tid = typeof l.target === 'object' ? l.target.id : l.target;
+      return (sid === nodeId || tid === nodeId) ? getNodeColor(node) : (RELATION_COLORS[l.type] || 'rgba(255,255,255,0.06)');
+    });
+
+  // Glow the target node
+  nodeEls.each(function(n) {
+    d3.select(this).select('.node-main').attr('filter',
+      n.id === nodeId ? 'url(#glow-hover)' :
+      isPrivateNode(n) ? 'url(#glow-private)' : `url(#glow-${n.source})`
+    );
+  });
+
+  // Smooth zoom/pan to the node
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  const scale = 2;
+  const transform = d3.zoomIdentity
+    .translate(width / 2 - node.x * scale, height / 2 - node.y * scale)
+    .scale(scale);
+  svg.transition().duration(600).call(
+    d3.zoom().scaleExtent([0.15, 6]).on('zoom', (event) => svg.select('g').attr('transform', event.transform)).transform,
+    transform
+  );
+
+  showInfoPanel(node);
+}
+
 function showInfoPanel(d) {
   const panel = document.getElementById('info-panel');
   panel.style.display = 'block';
@@ -826,7 +885,7 @@ function showInfoPanel(d) {
       const dir = sid === d.id ? '→' : '←';
       const relColor = RELATION_COLORS[e.type]?.replace(/[\d.]+\)$/, '0.9)') || '#666';
       const label = otherNode ? (otherNode.content || '').substring(0, 50) : otherId.substring(0, 12);
-      html += `<div class="panel-connection">
+      html += `<div class="panel-connection" data-node-id="${otherId}">
         <span class="dir">${dir}</span>
         <span class="rel" style="color:${relColor}">${e.type}</span>
         <span class="lbl">${label}</span>
@@ -837,6 +896,11 @@ function showInfoPanel(d) {
     }
     connEl.innerHTML = html;
     connEl.style.display = 'block';
+
+    // Make connections clickable
+    connEl.querySelectorAll('.panel-connection[data-node-id]').forEach(el => {
+      el.addEventListener('click', () => navigateToNode(el.dataset.nodeId));
+    });
   } else {
     connEl.style.display = 'none';
   }
@@ -862,10 +926,15 @@ document.getElementById('file-input').addEventListener('change', e => {
 });
 
 // Auto-load
-fetch('theo_export.json')
-  .then(r => r.json())
+fetch('p01_export.json')
+  .then(r => { if (!r.ok) throw new Error(); return r.json(); })
   .then(data => initGraph(data))
-  .catch(() => {});
+  .catch(() => {
+    fetch('theo_export.json')
+      .then(r => r.json())
+      .then(data => initGraph(data))
+      .catch(() => {});
+  });
 
 // Resize
 window.addEventListener('resize', () => {
