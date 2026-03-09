@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cascade Memory - Knowledge Graph</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0B0E14;
+    color: #E6E1CF;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  #header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(180deg, #0B0E14 60%, transparent);
+    pointer-events: none;
+  }
+
+  #header > * { pointer-events: auto; }
+
+  #stats {
+    font-size: 14px;
+    color: #BFBDB6;
+    letter-spacing: 0.5px;
+  }
+
+  #stats span { color: #FFCC66; font-weight: 600; }
+
+  #load-area {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  #load-area label {
+    cursor: pointer;
+    padding: 6px 16px;
+    border: 1px solid #1D2433;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #E6E1CF;
+    background: #11151C;
+    transition: all 0.2s;
+  }
+
+  #load-area label:hover {
+    border-color: #FFCC66;
+    color: #FFCC66;
+  }
+
+  #file-input { display: none; }
+
+  #persona-name {
+    font-size: 13px;
+    color: #BFBDB6;
+  }
+
+  /* Consent toggle */
+  .consent-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .consent-toggle-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #475266;
+    transition: color 0.3s;
+    cursor: default;
+    user-select: none;
+  }
+
+  .consent-toggle-label.active { color: #E6E1CF; }
+
+  .consent-switch {
+    position: relative;
+    width: 44px;
+    height: 22px;
+    cursor: pointer;
+  }
+
+  .consent-switch input { opacity: 0; width: 0; height: 0; }
+
+  .consent-track {
+    position: absolute;
+    inset: 0;
+    border-radius: 11px;
+    border: 1px solid #1D2433;
+    background: #131721;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .consent-switch input:checked ~ .consent-track {
+    background: rgba(88, 166, 255, 0.15);
+    border-color: #FFCC66;
+  }
+
+  .consent-thumb {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #475266;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .consent-switch input:checked ~ .consent-thumb {
+    left: 25px;
+    background: #FFCC66;
+    box-shadow: 0 0 10px rgba(88, 166, 255, 0.4);
+  }
+
+  .consent-badge {
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 12px;
+    transition: all 0.4s;
+    font-family: inherit;
+  }
+
+  .consent-badge.owner {
+    color: #FFCC66;
+    background: rgba(88, 166, 255, 0.1);
+    border: 1px solid rgba(88, 166, 255, 0.25);
+  }
+
+  .consent-badge.public {
+    color: #475266;
+    background: #11151C;
+    border: 1px solid #1D2433;
+  }
+
+  #filters {
+    position: fixed;
+    top: 56px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .filter-btn {
+    padding: 5px 14px;
+    border-radius: 20px;
+    border: 1px solid #1D2433;
+    background: #11151C;
+    color: #BFBDB6;
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.25s;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+
+  .filter-btn:hover { border-color: #FFCC66; }
+
+  .filter-btn.active {
+    color: #fff;
+    border-color: var(--source-color);
+    background: color-mix(in srgb, var(--source-color) 20%, #11151C);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--source-color) 30%, transparent);
+  }
+
+  #graph-container {
+    width: 100vw;
+    height: 100vh;
+  }
+
+  #side-panel {
+    position: fixed;
+    top: 0;
+    right: -420px;
+    width: 400px;
+    height: 100vh;
+    background: #11151C;
+    border-left: 1px solid #1D2433;
+    z-index: 200;
+    transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow-y: auto;
+    padding: 24px;
+  }
+
+  #side-panel.open { right: 0; }
+
+  #panel-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: none;
+    border: none;
+    color: #BFBDB6;
+    font-size: 20px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  #panel-close:hover { color: #E6E1CF; }
+
+  #panel-source {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+    font-weight: 600;
+  }
+
+  #panel-content {
+    font-size: 14px;
+    line-height: 1.7;
+    color: #E6E1CF;
+    margin: 16px 0;
+    padding: 16px;
+    background: #0B0E14;
+    border-radius: 8px;
+    border: 1px solid #131721;
+    word-wrap: break-word;
+  }
+
+  #panel-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 12px 0;
+  }
+
+  .tag {
+    padding: 3px 10px;
+    background: #131721;
+    border-radius: 12px;
+    font-size: 11px;
+    color: #BFBDB6;
+    border: 1px solid #1D2433;
+  }
+
+  #panel-connections {
+    margin-top: 16px;
+    border-top: 1px solid #131721;
+    padding-top: 12px;
+  }
+
+  .conn-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #475266;
+    margin-bottom: 8px;
+  }
+
+  .conn-item {
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+    font-size: 12px;
+    color: #BFBDB6;
+    padding: 4px 8px;
+    margin: 0 -8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .conn-item:hover { background: #131721; }
+  .conn-item .conn-dir { color: #475266; flex-shrink: 0; }
+  .conn-item .conn-type { font-size: 10px; flex-shrink: 0; color: #FFCC66; }
+  .conn-item .conn-label { color: #E6E1CF; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .conn-more { font-size: 11px; color: #475266; margin-top: 4px; padding-left: 8px; }
+
+  #panel-meta {
+    margin-top: 16px;
+    font-size: 12px;
+    color: #475266;
+    line-height: 2;
+  }
+
+  #panel-meta span { color: #BFBDB6; }
+
+  #legend {
+    position: fixed;
+    bottom: 16px;
+    right: 24px;
+    z-index: 100;
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: #475266;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  #branding {
+    position: fixed;
+    bottom: 46px;
+    right: 24px;
+    z-index: 100;
+    font-size: 11px;
+    color: #131721;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  #empty-state {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    z-index: 50;
+  }
+
+  #empty-state h2 {
+    font-size: 20px;
+    color: #1D2433;
+    font-weight: 400;
+    margin-bottom: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  #empty-state p {
+    font-size: 13px;
+    color: #131721;
+  }
+
+  svg { display: block; }
+
+  #consent-panel {
+    position: fixed;
+    bottom: 24px;
+    left: 24px;
+    z-index: 100;
+    background: #11151C;
+    border: 1px solid #1D2433;
+    border-radius: 12px;
+    padding: 16px;
+    min-width: 260px;
+  }
+
+  .consent-panel-title {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #475266;
+    margin-bottom: 12px;
+  }
+
+  .consent-slider-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 0;
+  }
+
+  .consent-slider-label {
+    font-size: 12px;
+    color: #BFBDB6;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .consent-slider-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  .consent-slider-toggle {
+    position: relative;
+    width: 36px;
+    height: 18px;
+    cursor: pointer;
+  }
+
+  .consent-slider-toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+
+  .consent-slider-track {
+    position: absolute;
+    inset: 0;
+    border-radius: 9px;
+    background: #1D2433;
+    transition: all 0.3s;
+  }
+
+  .consent-slider-toggle input:checked ~ .consent-slider-track {
+    background: rgba(88, 166, 255, 0.2);
+  }
+
+  .consent-slider-knob {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #475266;
+    transition: all 0.3s;
+  }
+
+  .consent-slider-toggle input:checked ~ .consent-slider-knob {
+    left: 20px;
+    background: #FFCC66;
+  }
+
+  .consent-panel-footer {
+    margin-top: 12px;
+    font-size: 11px;
+    color: #475266;
+    border-top: 1px solid #1D2433;
+    padding-top: 8px;
+  }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <div id="stats"></div>
+  <div id="load-area">
+    <span id="persona-name"></span>
+    <div class="consent-toggle" id="consent-toggle" style="display:none">
+      <span class="consent-toggle-label" id="lbl-public">PUBLIC</span>
+      <label class="consent-switch">
+        <input type="checkbox" id="consent-checkbox" checked>
+        <span class="consent-track"></span>
+        <span class="consent-thumb"></span>
+      </label>
+      <span class="consent-toggle-label active" id="lbl-owner">OWNER</span>
+      <span class="consent-badge owner" id="consent-badge">FULL ACCESS</span>
+    </div>
+    <label for="file-input">Load Export JSON</label>
+    <input type="file" id="file-input" accept=".json,application/json">
+  </div>
+</div>
+
+<div id="filters"></div>
+
+<div id="consent-panel" style="display:none">
+  <div class="consent-panel-title">DATA SHARING CONTROLS</div>
+  <div id="consent-sliders"></div>
+  <div class="consent-panel-footer">
+    <span id="consent-public-count">0</span> sources shared · <span id="consent-private-count">0</span> private
+  </div>
+</div>
+
+<div id="empty-state">
+  <h2>Cascade Memory Graph</h2>
+  <p>Load an export JSON to visualize</p>
+</div>
+
+<div id="graph-container"></div>
+
+<div id="side-panel">
+  <button id="panel-close">x</button>
+  <div id="panel-source"></div>
+  <div id="panel-content"></div>
+  <div id="panel-tags"></div>
+  <div id="panel-connections"></div>
+  <div id="panel-meta"></div>
+</div>
+
+<div id="legend"></div>
+<div id="branding">PORTABLE MEMORY FORMAT V0.1</div>
+
+<script>
+const PRIVATE_COLOR = '#0F1219';
+const SENSITIVE_TAGS = new Set(['therapy','anxiety','mental_health','finance','salary','debt','health','personal','family','relationship']);
+
+let consentConfig = null;
+let viewMode = 'owner';
+
+const SOURCE_COLORS = {
+  calendar: '#59C2FF',  // ayu dark blue
+  email:    '#AAD94C',  // ayu dark green
+  finance:  '#FFB454',  // ayu dark orange
+  lifelog:  '#D2A6FF',  // ayu dark purple
+  ai_chat:  '#F07178',  // ayu dark red
+  social:   '#95E6CB',  // ayu dark cyan
+  files:    '#E6D74C',  // yellow
+  bank:     '#FFB454',  // ayu dark orange
+};
+
+const SOURCE_LABELS = {
+  calendar: 'Calendar',
+  email:    'Email',
+  finance:  'Finance',
+  bank:     'Finance',
+  lifelog:  'Lifelog',
+  ai_chat:  'AI Chat',
+  social:   'Social',
+  files:    'Files',
+};
+
+function extractSource(memoryType) {
+  if (!memoryType) return 'files';
+  // Format: "{sensitivity}_{source}" e.g. "public_social", "private_ai_chat"
+  const parts = memoryType.split('_');
+  if (parts.length >= 2) {
+    // Remove first part (sensitivity), rejoin rest (handles ai_chat)
+    const source = parts.slice(1).join('_');
+    if (SOURCE_COLORS[source]) return source;
+  }
+  // Fallback: try the raw value
+  if (SOURCE_COLORS[memoryType]) return memoryType;
+  return 'files';
+}
+
+function getColor(source) {
+  return SOURCE_COLORS[source] || '#BFBDB6';
+}
+
+function isPrivateNode(node) {
+  if (!consentConfig) return false;
+  const sources = consentConfig.sources || {};
+  if (sources[node.source] === 'owner_only') return true;
+  if (node.tags && node.tags.some(t => SENSITIVE_TAGS.has(t))) return true;
+  return false;
+}
+
+function getNodeColor(node) {
+  if (viewMode === 'owner') return getColor(node.source);
+  return isPrivateNode(node) ? PRIVATE_COLOR : getColor(node.source);
+}
+
+function shouldRedactNode(node) {
+  return viewMode === 'public' && isPrivateNode(node);
+}
+
+// Build legend
+const legendEl = document.getElementById('legend');
+const shownSources = ['calendar', 'email', 'finance', 'lifelog', 'ai_chat', 'social', 'files'];
+shownSources.forEach(s => {
+  const item = document.createElement('div');
+  item.className = 'legend-item';
+  item.innerHTML = `<div class="legend-dot" style="background:${getColor(s)}"></div>${SOURCE_LABELS[s]}`;
+  legendEl.appendChild(item);
+});
+
+let simulation, svg, gLinks, gNodes, nodeEls, linkEls, graphData;
+let activeFilters = new Set();
+
+function initGraph(data) {
+  document.getElementById('empty-state').style.display = 'none';
+
+  consentConfig = data.consent || null;
+
+  const memories = data.memories || [];
+  const links = (data.links || []).slice();
+
+  // Build node map
+  const nodeMap = new Map();
+  memories.forEach(m => {
+    const source = extractSource(m.memory_type);
+    nodeMap.set(m.id, {
+      id: m.id,
+      content: m.content,
+      tags: m.tags || [],
+      source,
+      confidence: m.confidence || 1,
+      decay: m.decay_score || 1,
+      created_at: m.created_at,
+      source_id: m.source_id,
+      memory_type: m.memory_type,
+      connections: 0,
+    });
+  });
+
+  // Build valid edges
+  const edges = [];
+  links.forEach(l => {
+    if (nodeMap.has(l.source_id) && nodeMap.has(l.target_id)) {
+      edges.push({ source: l.source_id, target: l.target_id, type: l.link_type });
+      nodeMap.get(l.source_id).connections++;
+      nodeMap.get(l.target_id).connections++;
+    }
+  });
+
+  const nodes = Array.from(nodeMap.values());
+
+  const privateCount = nodes.filter(n => isPrivateNode(n)).length;
+
+  // Stats
+  document.getElementById('stats').innerHTML =
+    `<span>${nodes.length}</span> nodes &middot; <span>${edges.length}</span> edges` +
+    (consentConfig ? ` &middot; <span>${privateCount}</span> private` : '');
+
+  // Persona
+  const pName = data.persona_name || data.tenant_id || '';
+  document.getElementById('persona-name').textContent = pName;
+
+  // Consent toggle
+  const toggleEl = document.getElementById('consent-toggle');
+  toggleEl.style.display = (consentConfig && privateCount > 0) ? 'flex' : 'none';
+
+  // Filters
+  const sources = [...new Set(nodes.map(n => n.source))].sort();
+  const filtersEl = document.getElementById('filters');
+  filtersEl.innerHTML = '';
+  activeFilters = new Set(sources);
+
+  sources.forEach(s => {
+    const btn = document.createElement('button');
+    btn.className = 'filter-btn active';
+    btn.style.setProperty('--source-color', getColor(s));
+    btn.textContent = SOURCE_LABELS[s] || s;
+    btn.dataset.source = s;
+    btn.addEventListener('click', () => toggleFilter(s, btn));
+    filtersEl.appendChild(btn);
+  });
+
+  graphData = { nodes, edges };
+
+  if (consentConfig && consentConfig.sources) {
+    buildConsentPanel(consentConfig.sources);
+  }
+
+  renderGraph();
+}
+
+function toggleFilter(source, btn) {
+  if (activeFilters.has(source)) {
+    activeFilters.delete(source);
+    btn.classList.remove('active');
+  } else {
+    activeFilters.add(source);
+    btn.classList.add('active');
+  }
+  applyFilters();
+}
+
+function applyFilters() {
+  const visibleIds = new Set(graphData.nodes.filter(n => activeFilters.has(n.source)).map(n => n.id));
+
+  nodeEls.style('display', d => visibleIds.has(d.id) ? null : 'none');
+  linkEls.style('display', d => visibleIds.has(d.source.id) && visibleIds.has(d.target.id) ? null : 'none');
+}
+
+function renderGraph() {
+  const { nodes, edges } = graphData;
+  const container = document.getElementById('graph-container');
+  container.innerHTML = '';
+
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+
+  svg = d3.select(container).append('svg')
+    .attr('width', width)
+    .attr('height', height);
+
+  // Defs for glow
+  const defs = svg.append('defs');
+  const glowFilter = defs.append('filter').attr('id', 'glow');
+  glowFilter.append('feGaussianBlur').attr('stdDeviation', '3').attr('result', 'blur');
+  const feMerge = glowFilter.append('feMerge');
+  feMerge.append('feMergeNode').attr('in', 'blur');
+  feMerge.append('feMergeNode').attr('in', 'SourceGraphic');
+
+  // Radial gradient for background ambiance
+  const radGrad = defs.append('radialGradient')
+    .attr('id', 'bg-glow')
+    .attr('cx', '50%').attr('cy', '50%').attr('r', '50%');
+  radGrad.append('stop').attr('offset', '0%').attr('stop-color', '#11151C');
+  radGrad.append('stop').attr('offset', '100%').attr('stop-color', '#0B0E14');
+
+  svg.append('rect')
+    .attr('width', width).attr('height', height)
+    .attr('fill', 'url(#bg-glow)');
+
+  const g = svg.append('g');
+
+  // Zoom
+  const zoom = d3.zoom()
+    .scaleExtent([0.1, 8])
+    .on('zoom', (event) => g.attr('transform', event.transform));
+  svg.call(zoom);
+
+  // Links
+  gLinks = g.append('g');
+  linkEls = gLinks.selectAll('line')
+    .data(edges)
+    .join('line')
+    .attr('stroke', '#1D2433')
+    .attr('stroke-width', 0.8)
+    .attr('stroke-opacity', 0.6);
+
+  // Nodes
+  gNodes = g.append('g');
+  nodeEls = gNodes.selectAll('g')
+    .data(nodes, d => d.id)
+    .join('g')
+    .attr('cursor', 'pointer')
+    .call(d3.drag()
+      .on('start', dragStarted)
+      .on('drag', dragged)
+      .on('end', dragEnded));
+
+  // Node circle - outer glow ring
+  nodeEls.append('circle')
+    .attr('class', 'node-glow')
+    .attr('r', d => nodeRadius(d) + 4)
+    .attr('fill', 'none')
+    .attr('stroke', d => getNodeColor(d))
+    .attr('stroke-width', 1.5)
+    .attr('stroke-opacity', d => shouldRedactNode(d) ? 0.03 : 0.15)
+    .attr('filter', 'url(#glow)');
+
+  // Node circle - main
+  nodeEls.append('circle')
+    .attr('class', 'node-main')
+    .attr('r', d => nodeRadius(d))
+    .attr('fill', d => getNodeColor(d))
+    .attr('fill-opacity', d => shouldRedactNode(d) ? 0.3 : 0.85)
+    .attr('stroke', d => getNodeColor(d))
+    .attr('stroke-width', 1.5)
+    .attr('stroke-opacity', d => shouldRedactNode(d) ? 0.1 : 0.4);
+
+  // Hover + click
+  nodeEls.on('mouseover', handleHover)
+    .on('mouseout', handleHoverOut)
+    .on('click', handleClick);
+
+  // Simulation
+  simulation = d3.forceSimulation(nodes)
+    .force('link', d3.forceLink(edges).id(d => d.id).distance(80))
+    .force('charge', d3.forceManyBody().strength(-120))
+    .force('center', d3.forceCenter(width / 2, height / 2))
+    .force('collision', d3.forceCollide().radius(d => nodeRadius(d) + 6))
+    .force('x', d3.forceX(width / 2).strength(0.03))
+    .force('y', d3.forceY(height / 2).strength(0.03))
+    .on('tick', ticked);
+
+  // Warm up the sim a bit for nicer initial layout
+  simulation.alpha(1).restart();
+}
+
+function nodeRadius(d) {
+  return Math.max(5, Math.min(18, 5 + d.connections * 2.5));
+}
+
+function ticked() {
+  linkEls
+    .attr('x1', d => d.source.x)
+    .attr('y1', d => d.source.y)
+    .attr('x2', d => d.target.x)
+    .attr('y2', d => d.target.y);
+
+  nodeEls.attr('transform', d => `translate(${d.x},${d.y})`);
+}
+
+function dragStarted(event, d) {
+  if (!event.active) simulation.alphaTarget(0.3).restart();
+  d.fx = d.x;
+  d.fy = d.y;
+}
+
+function dragged(event, d) {
+  d.fx = event.x;
+  d.fy = event.y;
+}
+
+function dragEnded(event, d) {
+  if (!event.active) simulation.alphaTarget(0);
+  d.fx = null;
+  d.fy = null;
+}
+
+// Connected nodes map
+function getConnected(nodeId) {
+  const connected = new Set([nodeId]);
+  graphData.edges.forEach(e => {
+    const sid = typeof e.source === 'object' ? e.source.id : e.source;
+    const tid = typeof e.target === 'object' ? e.target.id : e.target;
+    if (sid === nodeId) connected.add(tid);
+    if (tid === nodeId) connected.add(sid);
+  });
+  return connected;
+}
+
+function handleHover(event, d) {
+  const connected = getConnected(d.id);
+
+  nodeEls.select('.node-main')
+    .transition().duration(200)
+    .attr('fill-opacity', n => connected.has(n.id) ? 1 : 0.1)
+    .attr('stroke-opacity', n => connected.has(n.id) ? 0.8 : 0.05);
+
+  nodeEls.select('.node-glow')
+    .transition().duration(200)
+    .attr('stroke-opacity', n => connected.has(n.id) ? 0.4 : 0.02);
+
+  linkEls.transition().duration(200)
+    .attr('stroke', l => {
+      const sid = typeof l.source === 'object' ? l.source.id : l.source;
+      const tid = typeof l.target === 'object' ? l.target.id : l.target;
+      return (sid === d.id || tid === d.id) ? getColor(d.source) : '#131721';
+    })
+    .attr('stroke-opacity', l => {
+      const sid = typeof l.source === 'object' ? l.source.id : l.source;
+      const tid = typeof l.target === 'object' ? l.target.id : l.target;
+      return (sid === d.id || tid === d.id) ? 0.8 : 0.08;
+    })
+    .attr('stroke-width', l => {
+      const sid = typeof l.source === 'object' ? l.source.id : l.source;
+      const tid = typeof l.target === 'object' ? l.target.id : l.target;
+      return (sid === d.id || tid === d.id) ? 2 : 0.8;
+    });
+}
+
+function handleHoverOut() {
+  nodeEls.select('.node-main')
+    .transition().duration(300)
+    .attr('fill-opacity', 0.85)
+    .attr('stroke-opacity', 0.4);
+
+  nodeEls.select('.node-glow')
+    .transition().duration(300)
+    .attr('stroke-opacity', 0.15);
+
+  linkEls.transition().duration(300)
+    .attr('stroke', '#1D2433')
+    .attr('stroke-opacity', 0.6)
+    .attr('stroke-width', 0.8);
+}
+
+function getNodeEdges(nodeId) {
+  return graphData.edges.filter(e => {
+    const sid = typeof e.source === 'object' ? e.source.id : e.source;
+    const tid = typeof e.target === 'object' ? e.target.id : e.target;
+    return sid === nodeId || tid === nodeId;
+  });
+}
+
+function navigateToNode(nodeId) {
+  const node = graphData.nodes.find(n => n.id === nodeId);
+  if (!node) return;
+  // Trigger click on that node
+  handleClick({ stopPropagation: () => {} }, node);
+  // Also trigger hover highlight
+  handleHover(null, node);
+}
+
+function handleClick(event, d) {
+  event.stopPropagation();
+  const panel = document.getElementById('side-panel');
+  const redacted = shouldRedactNode(d);
+
+  const sourceEl = document.getElementById('panel-source');
+  const color = getNodeColor(d);
+  const privLabel = isPrivateNode(d) ? ' · OWNER ONLY' : '';
+
+  if (redacted) {
+    sourceEl.textContent = 'REDACTED' + privLabel;
+    sourceEl.style.background = '#131721';
+    sourceEl.style.color = '#475266';
+    sourceEl.style.border = '1px solid #1D2433';
+    document.getElementById('panel-content').textContent = 'This memory is private';
+    document.getElementById('panel-content').style.color = '#1D2433';
+    document.getElementById('panel-tags').innerHTML = '';
+    document.getElementById('panel-connections').innerHTML = '';
+    document.getElementById('panel-meta').innerHTML = '';
+  } else {
+    sourceEl.textContent = (SOURCE_LABELS[d.source] || d.source) + privLabel;
+    sourceEl.style.background = `color-mix(in srgb, ${color} 25%, #11151C)`;
+    sourceEl.style.color = color;
+    sourceEl.style.border = `1px solid ${color}`;
+
+    const contentEl = document.getElementById('panel-content');
+    contentEl.textContent = d.content || '(no content)';
+    contentEl.style.color = '#E6E1CF';
+
+    const tagsEl = document.getElementById('panel-tags');
+    tagsEl.innerHTML = '';
+    (d.tags || []).forEach(t => {
+      const tag = document.createElement('span');
+      tag.className = 'tag';
+      tag.textContent = t;
+      tagsEl.appendChild(tag);
+    });
+
+    // Connections
+    const connEl = document.getElementById('panel-connections');
+    const nodeEdges = getNodeEdges(d.id);
+    if (nodeEdges.length > 0) {
+      let html = `<div class="conn-title">${nodeEdges.length} connections</div>`;
+      nodeEdges.slice(0, 10).forEach(e => {
+        const sid = typeof e.source === 'object' ? e.source.id : e.source;
+        const tid = typeof e.target === 'object' ? e.target.id : e.target;
+        const otherId = sid === d.id ? tid : sid;
+        const otherNode = graphData.nodes.find(n => n.id === otherId);
+        const dir = sid === d.id ? '→' : '←';
+        const label = otherNode ? (otherNode.content || '').substring(0, 60) : String(otherId).substring(0, 12);
+        html += `<div class="conn-item" data-node-id="${otherId}">
+          <span class="conn-dir">${dir}</span>
+          <span class="conn-type">${e.type || 'related'}</span>
+          <span class="conn-label">${label}</span>
+        </div>`;
+      });
+      if (nodeEdges.length > 10) {
+        html += `<div class="conn-more">+${nodeEdges.length - 10} more</div>`;
+      }
+      connEl.innerHTML = html;
+      connEl.querySelectorAll('.conn-item[data-node-id]').forEach(el => {
+        el.addEventListener('click', () => navigateToNode(el.dataset.nodeId));
+      });
+    } else {
+      connEl.innerHTML = '';
+    }
+
+    const meta = document.getElementById('panel-meta');
+    meta.innerHTML = '';
+    if (d.created_at) meta.innerHTML += `<div>Timestamp: <span>${d.created_at}</span></div>`;
+    if (d.source_id) meta.innerHTML += `<div>Source ID: <span>${d.source_id}</span></div>`;
+    if (d.memory_type) meta.innerHTML += `<div>Type: <span>${d.memory_type}</span></div>`;
+    meta.innerHTML += `<div>Confidence: <span>${d.confidence}</span></div>`;
+    meta.innerHTML += `<div>Decay: <span>${(d.decay || 0).toFixed(3)}</span></div>`;
+    meta.innerHTML += `<div>Connections: <span>${d.connections}</span></div>`;
+    meta.innerHTML += `<div>ID: <span style="font-size:10px;word-break:break-all">${d.id}</span></div>`;
+  }
+
+  panel.classList.add('open');
+}
+
+// Close panel
+document.getElementById('panel-close').addEventListener('click', () => {
+  document.getElementById('side-panel').classList.remove('open');
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.getElementById('side-panel').classList.remove('open');
+});
+
+// Consent toggle
+document.getElementById('consent-checkbox').addEventListener('change', function() {
+  viewMode = this.checked ? 'owner' : 'public';
+
+  // Update badge
+  const badge = document.getElementById('consent-badge');
+  const lblOwner = document.getElementById('lbl-owner');
+  const lblPublic = document.getElementById('lbl-public');
+  if (viewMode === 'owner') {
+    badge.className = 'consent-badge owner';
+    badge.textContent = 'FULL ACCESS';
+    lblOwner.classList.add('active');
+    lblPublic.classList.remove('active');
+  } else {
+    badge.className = 'consent-badge public';
+    badge.textContent = 'FILTERED';
+    lblOwner.classList.remove('active');
+    lblPublic.classList.add('active');
+  }
+
+  // Animate node colors
+  if (!nodeEls) return;
+
+  nodeEls.select('.node-main')
+    .transition().duration(600).ease(d3.easeCubicInOut)
+    .attr('fill', d => getNodeColor(d))
+    .attr('fill-opacity', d => shouldRedactNode(d) ? 0.3 : 0.85)
+    .attr('stroke', d => getNodeColor(d))
+    .attr('stroke-opacity', d => shouldRedactNode(d) ? 0.1 : 0.4);
+
+  nodeEls.select('.node-glow')
+    .transition().duration(600).ease(d3.easeCubicInOut)
+    .attr('stroke', d => getNodeColor(d))
+    .attr('stroke-opacity', d => shouldRedactNode(d) ? 0.03 : 0.15);
+
+  // Dim links to/from redacted nodes
+  if (linkEls) {
+    linkEls.transition().duration(600).ease(d3.easeCubicInOut)
+      .attr('stroke-opacity', d => {
+        const sId = typeof d.source === 'object' ? d.source.id : d.source;
+        const tId = typeof d.target === 'object' ? d.target.id : d.target;
+        const sNode = graphData.nodes.find(n => n.id === sId);
+        const tNode = graphData.nodes.find(n => n.id === tId);
+        if ((sNode && shouldRedactNode(sNode)) || (tNode && shouldRedactNode(tNode))) return 0.05;
+        return 0.6;
+      });
+  }
+});
+
+function buildConsentPanel(consentSources) {
+  const panel = document.getElementById('consent-panel');
+  const container = document.getElementById('consent-sliders');
+  container.innerHTML = '';
+  panel.style.display = 'block';
+
+  // Only show actual data sources, not extracted memory types
+  const DATA_SOURCES = new Set(['calendar', 'email', 'social', 'lifelog', 'bank', 'finance', 'ai_chat', 'files']);
+
+  Object.keys(consentSources).filter(s => DATA_SOURCES.has(s)).forEach(source => {
+    const isPublic = consentSources[source] === 'public';
+    const row = document.createElement('div');
+    row.className = 'consent-slider-row';
+    row.innerHTML = `
+      <span class="consent-slider-label">
+        <span class="consent-slider-dot" style="background:${getColor(source)}"></span>
+        ${SOURCE_LABELS[source] || source}
+      </span>
+      <label class="consent-slider-toggle">
+        <input type="checkbox" data-source="${source}" ${isPublic ? 'checked' : ''}>
+        <span class="consent-slider-track"></span>
+        <span class="consent-slider-knob"></span>
+      </label>
+    `;
+    container.appendChild(row);
+
+    row.querySelector('input').addEventListener('change', function() {
+      consentConfig.sources[source] = this.checked ? 'public' : 'owner_only';
+      updateConsentCounts();
+      if (viewMode === 'public') {
+        applyConsentVisuals();
+      }
+    });
+  });
+
+  updateConsentCounts();
+}
+
+function updateConsentCounts() {
+  if (!consentConfig) return;
+  const sources = consentConfig.sources || {};
+  const pub = Object.values(sources).filter(v => v === 'public').length;
+  const priv = Object.values(sources).filter(v => v === 'owner_only').length;
+  document.getElementById('consent-public-count').textContent = pub;
+  document.getElementById('consent-private-count').textContent = priv;
+}
+
+function applyConsentVisuals() {
+  if (!nodeEls) return;
+  nodeEls.select('.node-main')
+    .transition().duration(400).ease(d3.easeCubicInOut)
+    .attr('fill', d => getNodeColor(d))
+    .attr('fill-opacity', d => shouldRedactNode(d) ? 0.3 : 0.85)
+    .attr('stroke', d => getNodeColor(d))
+    .attr('stroke-opacity', d => shouldRedactNode(d) ? 0.1 : 0.4);
+
+  nodeEls.select('.node-glow')
+    .transition().duration(400).ease(d3.easeCubicInOut)
+    .attr('stroke', d => getNodeColor(d))
+    .attr('stroke-opacity', d => shouldRedactNode(d) ? 0.03 : 0.15);
+
+  if (linkEls) {
+    linkEls.transition().duration(400).ease(d3.easeCubicInOut)
+      .attr('stroke-opacity', d => {
+        const sId = typeof d.source === 'object' ? d.source.id : d.source;
+        const tId = typeof d.target === 'object' ? d.target.id : d.target;
+        const sNode = graphData.nodes.find(n => n.id === sId);
+        const tNode = graphData.nodes.find(n => n.id === tId);
+        if ((sNode && shouldRedactNode(sNode)) || (tNode && shouldRedactNode(tNode))) return 0.05;
+        return 0.6;
+      });
+  }
+}
+
+// File input
+document.getElementById('file-input').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      initGraph(data);
+    } catch (err) {
+      alert('Invalid JSON: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+});
+
+// Handle window resize
+window.addEventListener('resize', () => {
+  if (!svg) return;
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  svg.attr('width', w).attr('height', h);
+  svg.select('rect').attr('width', w).attr('height', h);
+  if (simulation) {
+    simulation.force('center', d3.forceCenter(w / 2, h / 2));
+    simulation.force('x', d3.forceX(w / 2).strength(0.03));
+    simulation.force('y', d3.forceY(h / 2).strength(0.03));
+    simulation.alpha(0.3).restart();
+  }
+});
+
+// Auto-load
+fetch('p01_export.json')
+  .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+  .then(data => initGraph(data))
+  .catch(() => {
+    fetch('theo_export.json')
+      .then(r => r.json())
+      .then(data => initGraph(data))
+      .catch(() => {});
+  });
+</script>
+</body>
+</html>
