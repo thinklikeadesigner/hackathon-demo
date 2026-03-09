@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cascade Memory Graph</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0a0a0f;
+    color: #e0e0e0;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  #header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(180deg, rgba(10,10,15,0.95) 0%, transparent 100%);
+    pointer-events: none;
+  }
+
+  #header > * { pointer-events: auto; }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .header-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ab47bc;
+    box-shadow: 0 0 12px #ab47bc;
+  }
+
+  .header-title {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: #fff;
+  }
+
+  .header-stats {
+    font-size: 10px;
+    color: #666;
+    margin-left: 8px;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .header-right label {
+    cursor: pointer;
+    padding: 4px 10px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 3px;
+    background: transparent;
+    color: #999;
+    font-family: inherit;
+    transition: all 0.2s;
+  }
+
+  .header-right label:hover {
+    border-color: rgba(255,255,255,0.3);
+    color: #fff;
+  }
+
+  #file-input { display: none; }
+
+  #filters {
+    position: fixed;
+    top: 56px;
+    left: 24px;
+    z-index: 10;
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    pointer-events: none;
+  }
+
+  #filters > * { pointer-events: auto; }
+
+  .filter-btn {
+    padding: 4px 10px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 3px;
+    background: transparent;
+    color: #555;
+    font-family: 'JetBrains Mono', monospace;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .filter-btn:hover {
+    border-color: rgba(255,255,255,0.3);
+  }
+
+  .filter-btn.active {
+    border-color: rgba(255,255,255,0.3);
+    background: rgba(255,255,255,0.08);
+    color: var(--source-color);
+  }
+
+  #info-panel {
+    position: fixed;
+    top: 64px;
+    right: 20px;
+    width: 260px;
+    z-index: 10;
+    background: rgba(15,15,20,0.92);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 6px;
+    padding: 14px 16px;
+    backdrop-filter: blur(12px);
+    display: none;
+  }
+
+  .panel-type {
+    font-size: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 6px;
+  }
+
+  .panel-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 10px;
+    line-height: 1.5;
+    word-wrap: break-word;
+  }
+
+  .panel-divider {
+    border-top: 1px solid rgba(255,255,255,0.06);
+    padding-top: 8px;
+  }
+
+  .panel-connections-title {
+    font-size: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #555;
+    margin-bottom: 6px;
+  }
+
+  .panel-connection {
+    font-size: 10px;
+    color: #888;
+    padding: 2px 0;
+    display: flex;
+    gap: 6px;
+    align-items: baseline;
+  }
+
+  .panel-connection .dir { color: #555; flex-shrink: 0; }
+  .panel-connection .rel { font-size: 8px; flex-shrink: 0; }
+  .panel-connection .lbl { color: #aaa; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .panel-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 8px;
+  }
+
+  .panel-tag {
+    font-size: 8px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: rgba(255,255,255,0.05);
+    color: #666;
+    letter-spacing: 0.5px;
+  }
+
+  .panel-more {
+    font-size: 9px;
+    color: #444;
+    margin-top: 4px;
+  }
+
+  .panel-meta {
+    margin-top: 8px;
+    font-size: 9px;
+    color: #444;
+    border-top: 1px solid rgba(255,255,255,0.04);
+    padding-top: 6px;
+  }
+
+  #legend {
+    position: fixed;
+    bottom: 16px;
+    left: 24px;
+    z-index: 10;
+    display: flex;
+    gap: 16px;
+    font-size: 9px;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    align-items: center;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .legend-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+  }
+
+  .legend-sep {
+    margin: 0 4px;
+    color: #333;
+  }
+
+  .legend-hint {
+    color: #555;
+  }
+
+  #badge {
+    position: fixed;
+    bottom: 16px;
+    right: 20px;
+    z-index: 10;
+    background: rgba(171,71,188,0.1);
+    border: 1px solid rgba(171,71,188,0.2);
+    border-radius: 4px;
+    padding: 6px 12px;
+    font-size: 9px;
+    color: #ab47bc;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  #empty-state {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    z-index: 5;
+  }
+
+  #empty-state h2 {
+    font-size: 16px;
+    color: #333;
+    font-weight: 400;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  #empty-state p {
+    font-size: 11px;
+    color: #222;
+  }
+
+  svg { display: block; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <div class="header-left">
+    <div class="header-dot"></div>
+    <span class="header-title">CASCADE MEMORY GRAPH</span>
+    <span class="header-stats" id="stats"></span>
+  </div>
+  <div class="header-right">
+    <span id="persona-name" style="font-size:10px;color:#666"></span>
+    <label for="file-input">LOAD JSON</label>
+    <input type="file" id="file-input" accept=".json,application/json">
+  </div>
+</div>
+
+<div id="filters"></div>
+
+<div id="empty-state">
+  <h2>Cascade Memory Graph</h2>
+  <p>load an export JSON to visualize</p>
+</div>
+
+<div id="graph-container"></div>
+
+<div id="info-panel">
+  <div class="panel-type" id="panel-type"></div>
+  <div class="panel-label" id="panel-label"></div>
+  <div class="panel-tags" id="panel-tags"></div>
+  <div class="panel-divider" id="panel-connections"></div>
+  <div class="panel-meta" id="panel-meta"></div>
+</div>
+
+<div id="legend"></div>
+<div id="badge">portable memory format v0.1</div>
+
+<script>
+const SOURCE_COLORS = {
+  calendar: '#4fc3f7',
+  email:    '#66bb6a',
+  finance:  '#ffa726',
+  lifelog:  '#ab47bc',
+  ai_chat:  '#ef5350',
+  social:   '#26c6da',
+  files:    '#ffee58',
+  bank:     '#ffa726',
+};
+
+const SOURCE_LABELS = {
+  calendar: 'Calendar', email: 'Email', finance: 'Finance',
+  bank: 'Finance', lifelog: 'Lifelog', ai_chat: 'AI Chat',
+  social: 'Social', files: 'Files',
+};
+
+const RELATION_COLORS = {
+  cross_reference: 'rgba(255,255,255,0.08)',
+  similar:         'rgba(255,255,255,0.06)',
+  related:         'rgba(255,255,255,0.06)',
+  follow_up:       'rgba(171,71,188,0.25)',
+  elaborates:      'rgba(255,255,255,0.08)',
+  implements:      'rgba(171,71,188,0.25)',
+  superseded_by:   'rgba(239,83,80,0.2)',
+  inspired:        'rgba(255,167,38,0.25)',
+  supports:        'rgba(102,187,106,0.2)',
+  caused_by:       'rgba(79,195,247,0.2)',
+};
+
+function extractSource(memoryType) {
+  if (!memoryType) return 'files';
+  const parts = memoryType.split('_');
+  if (parts.length >= 2) {
+    const source = parts.slice(1).join('_');
+    if (SOURCE_COLORS[source]) return source;
+  }
+  if (SOURCE_COLORS[memoryType]) return memoryType;
+  return 'files';
+}
+
+function getColor(source) {
+  return SOURCE_COLORS[source] || '#888';
+}
+
+// Build legend
+const legendEl = document.getElementById('legend');
+['calendar','email','finance','lifelog','ai_chat','social','files'].forEach(s => {
+  const item = document.createElement('div');
+  item.className = 'legend-item';
+  item.innerHTML = `<div class="legend-dot" style="background:${getColor(s)}"></div>${SOURCE_LABELS[s]}`;
+  legendEl.appendChild(item);
+});
+legendEl.innerHTML += '<span class="legend-sep">|</span><span class="legend-hint">drag nodes · scroll to zoom · hover to explore</span>';
+
+let simulation, svg, gLinks, gNodes, nodeEls, linkEls, graphData;
+let activeFilters = new Set();
+let hoveredNode = null;
+let selectedNode = null;
+
+function initGraph(data) {
+  document.getElementById('empty-state').style.display = 'none';
+
+  const memories = data.memories || [];
+  const links = (data.links || []).slice();
+
+  const nodeMap = new Map();
+  memories.forEach(m => {
+    const source = extractSource(m.memory_type);
+    nodeMap.set(m.id, {
+      id: m.id,
+      content: m.content,
+      tags: m.tags || [],
+      source,
+      confidence: m.confidence || 1,
+      decay: m.decay_score || 1,
+      created_at: m.created_at,
+      source_id: m.source_id,
+      memory_type: m.memory_type,
+      connections: 0,
+    });
+  });
+
+  const edges = [];
+  links.forEach(l => {
+    if (nodeMap.has(l.source_id) && nodeMap.has(l.target_id) && l.source_id !== l.target_id) {
+      edges.push({ source: l.source_id, target: l.target_id, type: l.link_type || 'related' });
+      nodeMap.get(l.source_id).connections++;
+      nodeMap.get(l.target_id).connections++;
+    }
+  });
+
+  const nodes = Array.from(nodeMap.values());
+
+  document.getElementById('stats').textContent =
+    `${nodes.length} nodes · ${edges.length} edges`;
+  document.getElementById('persona-name').textContent =
+    data.persona_name || data.tenant_id || '';
+
+  // Filters
+  const sources = [...new Set(nodes.map(n => n.source))].sort();
+  const filtersEl = document.getElementById('filters');
+  filtersEl.innerHTML = '';
+  activeFilters = new Set(sources);
+
+  // "all" button
+  const allBtn = document.createElement('button');
+  allBtn.className = 'filter-btn active';
+  allBtn.style.setProperty('--source-color', '#999');
+  allBtn.textContent = 'ALL';
+  allBtn.addEventListener('click', () => {
+    if (activeFilters.size === sources.length) {
+      // Deselect all
+      activeFilters.clear();
+      filtersEl.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    } else {
+      // Select all
+      activeFilters = new Set(sources);
+      filtersEl.querySelectorAll('.filter-btn').forEach(b => b.classList.add('active'));
+    }
+    applyFilters();
+  });
+  filtersEl.appendChild(allBtn);
+
+  sources.forEach(s => {
+    const btn = document.createElement('button');
+    btn.className = 'filter-btn active';
+    btn.style.setProperty('--source-color', getColor(s));
+    btn.textContent = SOURCE_LABELS[s] || s;
+    btn.dataset.source = s;
+    btn.addEventListener('click', () => toggleFilter(s, btn));
+    filtersEl.appendChild(btn);
+  });
+
+  graphData = { nodes, edges, nodeMap };
+  renderGraph();
+}
+
+function toggleFilter(source, btn) {
+  if (activeFilters.has(source)) {
+    activeFilters.delete(source);
+    btn.classList.remove('active');
+  } else {
+    activeFilters.add(source);
+    btn.classList.add('active');
+  }
+  applyFilters();
+}
+
+function applyFilters() {
+  const visibleIds = new Set(graphData.nodes.filter(n => activeFilters.has(n.source)).map(n => n.id));
+  nodeEls.style('display', d => visibleIds.has(d.id) ? null : 'none');
+  linkEls.style('display', d => visibleIds.has(d.source.id) && visibleIds.has(d.target.id) ? null : 'none');
+}
+
+function nodeRadius(d) {
+  if (d.connections >= 20) return 16;
+  if (d.connections >= 10) return 12;
+  if (d.connections >= 5) return 9;
+  return 5 + Math.min(d.connections, 4);
+}
+
+function isHub(d) { return d.connections >= 10; }
+
+function renderGraph() {
+  const { nodes, edges } = graphData;
+  const container = document.getElementById('graph-container');
+  container.innerHTML = '';
+
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+
+  svg = d3.select(container).append('svg')
+    .attr('width', width).attr('height', height);
+
+  const defs = svg.append('defs');
+
+  // Per-source glow filters
+  Object.entries(SOURCE_COLORS).forEach(([source, color]) => {
+    const glow = defs.append('filter')
+      .attr('id', `glow-${source}`)
+      .attr('x', '-50%').attr('y', '-50%')
+      .attr('width', '200%').attr('height', '200%');
+    glow.append('feGaussianBlur').attr('stdDeviation', '4').attr('result', 'blur');
+    glow.append('feFlood').attr('flood-color', color).attr('flood-opacity', '0.6').attr('result', 'color');
+    glow.append('feComposite').attr('in', 'color').attr('in2', 'blur').attr('operator', 'in').attr('result', 'glow');
+    const merge = glow.append('feMerge');
+    merge.append('feMergeNode').attr('in', 'glow');
+    merge.append('feMergeNode').attr('in', 'SourceGraphic');
+  });
+
+  // Hover glow (white, strong)
+  const hoverGlow = defs.append('filter')
+    .attr('id', 'glow-hover')
+    .attr('x', '-80%').attr('y', '-80%')
+    .attr('width', '260%').attr('height', '260%');
+  hoverGlow.append('feGaussianBlur').attr('stdDeviation', '8').attr('result', 'blur');
+  hoverGlow.append('feFlood').attr('flood-color', '#ffffff').attr('flood-opacity', '0.5').attr('result', 'color');
+  hoverGlow.append('feComposite').attr('in', 'color').attr('in2', 'blur').attr('operator', 'in').attr('result', 'glow');
+  const hMerge = hoverGlow.append('feMerge');
+  hMerge.append('feMergeNode').attr('in', 'glow');
+  hMerge.append('feMergeNode').attr('in', 'SourceGraphic');
+
+  // Grain texture
+  const grainFilter = defs.append('filter').attr('id', 'grain');
+  grainFilter.append('feTurbulence')
+    .attr('type', 'fractalNoise').attr('baseFrequency', '0.65')
+    .attr('numOctaves', '3').attr('stitchTiles', 'stitch');
+  grainFilter.append('feColorMatrix').attr('type', 'saturate').attr('values', '0');
+  grainFilter.append('feComponentTransfer').append('feFuncA')
+    .attr('type', 'linear').attr('slope', '0.08');
+  grainFilter.append('feBlend').attr('in', 'SourceGraphic').attr('mode', 'multiply');
+
+  // Background
+  svg.append('rect').attr('width', width).attr('height', height).attr('fill', '#0a0a0f');
+  svg.append('rect').attr('width', width).attr('height', height).attr('fill', 'transparent').attr('filter', 'url(#grain)');
+
+  // Radial accent
+  const bgGrad = defs.append('radialGradient')
+    .attr('id', 'bg-accent').attr('cx', '50%').attr('cy', '50%').attr('r', '50%');
+  bgGrad.append('stop').attr('offset', '0%').attr('stop-color', '#ab47bc').attr('stop-opacity', '0.04');
+  bgGrad.append('stop').attr('offset', '100%').attr('stop-color', '#0a0a0f').attr('stop-opacity', '0');
+  svg.append('rect').attr('width', width).attr('height', height).attr('fill', 'url(#bg-accent)');
+
+  const g = svg.append('g');
+
+  // Zoom
+  const zoom = d3.zoom().scaleExtent([0.15, 6])
+    .on('zoom', (event) => g.attr('transform', event.transform));
+  svg.call(zoom);
+
+  // Click background to deselect
+  svg.on('click', () => {
+    selectedNode = null;
+    document.getElementById('info-panel').style.display = 'none';
+  });
+
+  // Links
+  gLinks = g.append('g');
+  linkEls = gLinks.selectAll('line')
+    .data(edges)
+    .join('line')
+    .attr('stroke', d => RELATION_COLORS[d.type] || 'rgba(255,255,255,0.06)')
+    .attr('stroke-width', d => d.type === 'follow_up' || d.type === 'implements' ? 1.5 : 1);
+
+  // Nodes
+  gNodes = g.append('g');
+  nodeEls = gNodes.selectAll('g')
+    .data(nodes, d => d.id)
+    .join('g')
+    .attr('cursor', 'pointer')
+    .call(d3.drag()
+      .on('start', dragStarted)
+      .on('drag', dragged)
+      .on('end', dragEnded));
+
+  // Outer dashed ring for hub nodes
+  nodeEls.filter(d => isHub(d))
+    .append('circle')
+    .attr('class', 'node-ring')
+    .attr('r', d => nodeRadius(d) + 3)
+    .attr('fill', 'none')
+    .attr('stroke', d => getColor(d.source))
+    .attr('stroke-width', 1)
+    .attr('stroke-opacity', 0.3)
+    .attr('stroke-dasharray', '3,3');
+
+  // Main circle
+  nodeEls.append('circle')
+    .attr('class', 'node-main')
+    .attr('r', d => nodeRadius(d))
+    .attr('fill', d => getColor(d.source))
+    .attr('filter', d => `url(#glow-${d.source})`)
+    .attr('stroke', d => d3.color(getColor(d.source)).brighter(0.5))
+    .attr('stroke-width', d => isHub(d) ? 2 : 0.5)
+    .attr('stroke-opacity', 0.4);
+
+  // Labels (hidden by default)
+  nodeEls.append('text')
+    .attr('class', 'node-label')
+    .text(d => {
+      const txt = d.content || '';
+      return txt.length > 40 ? txt.substring(0, 37) + '...' : txt;
+    })
+    .attr('dy', d => nodeRadius(d) + 14)
+    .attr('text-anchor', 'middle')
+    .attr('fill', '#ccc')
+    .attr('font-size', '9px')
+    .attr('font-family', "'JetBrains Mono', monospace")
+    .attr('opacity', 0)
+    .attr('pointer-events', 'none');
+
+  // Interactions
+  nodeEls
+    .on('mouseenter', handleHover)
+    .on('mouseleave', handleHoverOut)
+    .on('click', handleClick);
+
+  // Simulation
+  simulation = d3.forceSimulation(nodes)
+    .force('link', d3.forceLink(edges).id(d => d.id).distance(60).strength(0.3))
+    .force('charge', d3.forceManyBody().strength(-80))
+    .force('center', d3.forceCenter(width / 2, height / 2))
+    .force('collision', d3.forceCollide().radius(d => nodeRadius(d) + 4))
+    .force('x', d3.forceX(width / 2).strength(0.04))
+    .force('y', d3.forceY(height / 2).strength(0.04))
+    .on('tick', ticked);
+
+  simulation.alpha(1).restart();
+}
+
+function ticked() {
+  linkEls
+    .attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+    .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+  nodeEls.attr('transform', d => `translate(${d.x},${d.y})`);
+}
+
+function dragStarted(event, d) {
+  if (!event.active) simulation.alphaTarget(0.3).restart();
+  d.fx = d.x; d.fy = d.y;
+}
+function dragged(event, d) { d.fx = event.x; d.fy = event.y; }
+function dragEnded(event, d) {
+  if (!event.active) simulation.alphaTarget(0);
+  d.fx = null; d.fy = null;
+}
+
+function getConnected(nodeId) {
+  const connected = new Set([nodeId]);
+  graphData.edges.forEach(e => {
+    const sid = typeof e.source === 'object' ? e.source.id : e.source;
+    const tid = typeof e.target === 'object' ? e.target.id : e.target;
+    if (sid === nodeId) connected.add(tid);
+    if (tid === nodeId) connected.add(sid);
+  });
+  return connected;
+}
+
+function getNodeEdges(nodeId) {
+  return graphData.edges.filter(e => {
+    const sid = typeof e.source === 'object' ? e.source.id : e.source;
+    const tid = typeof e.target === 'object' ? e.target.id : e.target;
+    return sid === nodeId || tid === nodeId;
+  });
+}
+
+function handleHover(event, d) {
+  hoveredNode = d.id;
+  const connected = getConnected(d.id);
+
+  nodeEls.select('.node-main')
+    .transition().duration(200)
+    .attr('opacity', n => connected.has(n.id) ? 1 : 0.08);
+
+  nodeEls.select('.node-ring')
+    .transition().duration(200)
+    .attr('stroke-opacity', n => connected.has(n.id) ? 0.5 : 0.03);
+
+  nodeEls.selectAll('.node-label')
+    .transition().duration(200)
+    .attr('opacity', n => connected.has(n.id) && n.connections >= 3 ? 0.9 : 0);
+
+  linkEls.transition().duration(200)
+    .attr('stroke-opacity', l => {
+      const sid = typeof l.source === 'object' ? l.source.id : l.source;
+      const tid = typeof l.target === 'object' ? l.target.id : l.target;
+      return (sid === d.id || tid === d.id) ? 1 : 0.03;
+    })
+    .attr('stroke-width', l => {
+      const sid = typeof l.source === 'object' ? l.source.id : l.source;
+      const tid = typeof l.target === 'object' ? l.target.id : l.target;
+      return (sid === d.id || tid === d.id) ? 2.5 : 0.5;
+    })
+    .attr('stroke', l => {
+      const sid = typeof l.source === 'object' ? l.source.id : l.source;
+      const tid = typeof l.target === 'object' ? l.target.id : l.target;
+      return (sid === d.id || tid === d.id) ? getColor(d.source) : (RELATION_COLORS[l.type] || 'rgba(255,255,255,0.06)');
+    });
+
+  d3.select(event.currentTarget).select('.node-main').attr('filter', 'url(#glow-hover)');
+
+  // Show info panel on hover
+  showInfoPanel(d);
+}
+
+function handleHoverOut(event) {
+  hoveredNode = null;
+
+  nodeEls.select('.node-main')
+    .transition().duration(300)
+    .attr('opacity', 1);
+
+  nodeEls.select('.node-ring')
+    .transition().duration(300)
+    .attr('stroke-opacity', 0.3);
+
+  nodeEls.selectAll('.node-label')
+    .transition().duration(300)
+    .attr('opacity', 0);
+
+  linkEls.transition().duration(300)
+    .attr('stroke', d => RELATION_COLORS[d.type] || 'rgba(255,255,255,0.06)')
+    .attr('stroke-opacity', 1)
+    .attr('stroke-width', d => d.type === 'follow_up' || d.type === 'implements' ? 1.5 : 1);
+
+  nodeEls.each(function(d) {
+    d3.select(this).select('.node-main').attr('filter', `url(#glow-${d.source})`);
+  });
+
+  if (!selectedNode) {
+    document.getElementById('info-panel').style.display = 'none';
+  }
+}
+
+function handleClick(event, d) {
+  event.stopPropagation();
+  selectedNode = selectedNode === d.id ? null : d.id;
+  if (selectedNode) {
+    showInfoPanel(d);
+  } else {
+    document.getElementById('info-panel').style.display = 'none';
+  }
+}
+
+function showInfoPanel(d) {
+  const panel = document.getElementById('info-panel');
+  panel.style.display = 'block';
+
+  const sourceLabel = SOURCE_LABELS[d.source] || d.source;
+  const typeEl = document.getElementById('panel-type');
+  typeEl.textContent = `${d.memory_type || sourceLabel} · ${d.connections} connections`;
+  typeEl.style.color = getColor(d.source);
+
+  document.getElementById('panel-label').textContent = d.content || '(empty)';
+
+  // Tags
+  const tagsEl = document.getElementById('panel-tags');
+  tagsEl.innerHTML = '';
+  (d.tags || []).forEach(t => {
+    const tag = document.createElement('span');
+    tag.className = 'panel-tag';
+    tag.textContent = t;
+    tagsEl.appendChild(tag);
+  });
+
+  // Connections
+  const connEl = document.getElementById('panel-connections');
+  const nodeEdges = getNodeEdges(d.id);
+  if (nodeEdges.length > 0) {
+    let html = `<div class="panel-connections-title">${nodeEdges.length} connections</div>`;
+    const shown = nodeEdges.slice(0, 8);
+    shown.forEach(e => {
+      const sid = typeof e.source === 'object' ? e.source.id : e.source;
+      const tid = typeof e.target === 'object' ? e.target.id : e.target;
+      const otherId = sid === d.id ? tid : sid;
+      const otherNode = graphData.nodes.find(n => n.id === otherId);
+      const dir = sid === d.id ? '→' : '←';
+      const relColor = RELATION_COLORS[e.type]?.replace(/[\d.]+\)$/, '0.9)') || '#666';
+      const label = otherNode ? (otherNode.content || '').substring(0, 50) : otherId.substring(0, 12);
+      html += `<div class="panel-connection">
+        <span class="dir">${dir}</span>
+        <span class="rel" style="color:${relColor}">${e.type}</span>
+        <span class="lbl">${label}</span>
+      </div>`;
+    });
+    if (nodeEdges.length > 8) {
+      html += `<div class="panel-more">+${nodeEdges.length - 8} more</div>`;
+    }
+    connEl.innerHTML = html;
+    connEl.style.display = 'block';
+  } else {
+    connEl.style.display = 'none';
+  }
+
+  // Meta
+  const meta = document.getElementById('panel-meta');
+  let metaHtml = '';
+  if (d.created_at) metaHtml += d.created_at.split('T')[0] + ' · ';
+  metaHtml += `conf: ${d.confidence} · decay: ${(d.decay || 0).toFixed(2)}`;
+  meta.textContent = metaHtml;
+}
+
+// File input
+document.getElementById('file-input').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try { initGraph(JSON.parse(ev.target.result)); }
+    catch (err) { alert('Invalid JSON: ' + err.message); }
+  };
+  reader.readAsText(file);
+});
+
+// Auto-load
+fetch('theo_export.json')
+  .then(r => r.json())
+  .then(data => initGraph(data))
+  .catch(() => {});
+
+// Resize
+window.addEventListener('resize', () => {
+  if (!svg) return;
+  const w = window.innerWidth, h = window.innerHeight;
+  svg.attr('width', w).attr('height', h);
+  svg.selectAll('rect').attr('width', w).attr('height', h);
+  if (simulation) {
+    simulation.force('center', d3.forceCenter(w / 2, h / 2));
+    simulation.force('x', d3.forceX(w / 2).strength(0.04));
+    simulation.force('y', d3.forceY(h / 2).strength(0.04));
+    simulation.alpha(0.3).restart();
+  }
+});
+</script>
+</body>
+</html>

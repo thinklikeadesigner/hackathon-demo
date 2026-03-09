@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.venv/
+.env
+*.pkl
+.memory_cache.pkl
+data/personadata/
+*.egg-info/
+dist/
+build/
