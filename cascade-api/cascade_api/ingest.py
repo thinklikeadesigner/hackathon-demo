@@ -5,6 +5,7 @@ import random
 from pathlib import Path
 
 from cascade_api.memory import MemoryClient
+from cascade_api.consent import ConsentConfig, set_consent
 from cascade_api.permissions import classify_sensitivity
 
 logger = logging.getLogger(__name__)
@@ -135,5 +136,27 @@ async def ingest_persona(
         personality = profile.get("personality", {})
         if personality.get("communication_style"):
             await tenant.core.append("Personality", f"- Communication: {personality['communication_style']}")
+
+    # Load consent.json if present
+    consent_path = persona_dir / "consent.json"
+    if consent_path.exists():
+        with open(consent_path) as f:
+            consent_data = json.load(f)
+        # Map the hackathon consent format to our per-source config
+        # The dataset consent.json has allowed_uses/prohibited_uses (dataset license),
+        # but we can also look for per-source sharing preferences if present
+        source_consent = consent_data.get("sharing", {})
+        if source_consent:
+            config = ConsentConfig(sources=source_consent)
+        else:
+            # Use defaults — the dataset consent.json is a dataset license,
+            # not a user sharing config. Apply sensible defaults.
+            config = ConsentConfig()
+        set_consent(tenant_id, config)
+        logger.info(f"  Loaded consent config for {tenant_id}")
+    else:
+        # No consent file — apply defaults
+        set_consent(tenant_id, ConsentConfig())
+        logger.info(f"  Applied default consent config for {tenant_id}")
 
     return stats

@@ -7,6 +7,7 @@ from telegram.ext import ContextTypes
 
 from cascade_api.memory import MemoryClient
 from cascade_api.config import BotConfig
+from cascade_api.consent import get_consent, extract_source_from_memory_type
 from cascade_api.permissions import filter_by_permission
 from cascade_api.synthesize import synthesize_answer
 
@@ -49,6 +50,7 @@ def make_message_handler(config: BotConfig, memory_client: MemoryClient):
     tenant = memory_client.for_tenant(config.tenant_id)
 
     export_fn = make_export_handler(config, memory_client)
+    privacy_fn = make_privacy_handler(config)
 
     async def handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         question = update.message.text
@@ -56,6 +58,10 @@ def make_message_handler(config: BotConfig, memory_client: MemoryClient):
         # Catch /export even if Telegram doesn't send it as a command entity
         if question and question.strip().lower().startswith("/export"):
             return await export_fn(update, ctx)
+
+        # Catch /privacy as text fallback
+        if question and question.strip().lower().startswith("/privacy"):
+            return await privacy_fn(update, ctx)
 
         context = determine_context(update, config)
 
@@ -67,7 +73,7 @@ def make_message_handler(config: BotConfig, memory_client: MemoryClient):
         logger.info(f"[{config.name}] recall store id={id(memory_client.store)}, for '{question[:50]}': {len(results)} results")
         for r in results[:5]:
             logger.info(f"  {r.memory.memory_type} sim={r.similarity:.3f} {r.memory.content[:60]}")
-        filtered = filter_by_permission(results, context)
+        filtered = filter_by_permission(results, context, tenant_id=config.tenant_id)
         logger.info(f"[{config.name}] after {context} filter: {len(filtered)} results")
         core_content, _ = await tenant.core.read()
 
@@ -92,6 +98,42 @@ def make_message_handler(config: BotConfig, memory_client: MemoryClient):
                         _save_cache_fn()
             except Exception as e:
                 logger.warning(f"[{config.name}] memory extraction failed: {e}")
+
+    return handler
+
+
+def make_privacy_handler(config: BotConfig):
+    """Create a /privacy handler for viewing and changing consent settings."""
+
+    async def handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+        context = determine_context(update, config)
+        if context != "dm_owner":
+            await update.message.reply_text("Privacy settings are only available to the owner.")
+            return
+
+        text = update.message.text.strip()
+        consent = get_consent(config.tenant_id)
+
+        # /privacy set <source> <level>
+        parts = text.split()
+        if len(parts) >= 4 and parts[1].lower() == "set":
+            source = parts[2].lower()
+            level = parts[3].lower()
+            if consent.set_level(source, level):
+                if _save_cache_fn:
+                    _save_cache_fn()
+                await update.message.reply_text(
+                    f"Updated: {source} → {level}\n\n{consent.summary()}"
+                )
+            else:
+                await update.message.reply_text(
+                    f"Invalid. Use: /privacy set <source> <public|owner_only>\n"
+                    f"Sources: {', '.join(consent.sources.keys())}"
+                )
+            return
+
+        # /privacy — show current settings
+        await update.message.reply_text(consent.summary())
 
     return handler
 
@@ -122,9 +164,12 @@ def make_export_handler(config: BotConfig, memory_client: MemoryClient):
                 if link_dict not in all_links:
                     all_links.append(link_dict)
 
+        consent = get_consent(config.tenant_id)
+
         export = {
             "tenant_id": config.tenant_id,
             "persona_name": config.name,
+            "consent": consent.to_dict(),
             "core_memory": {"content": core_content, "version": core_version},
             "memories": [
                 {

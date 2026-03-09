@@ -6,7 +6,7 @@ from telegram.ext import Application, MessageHandler, CommandHandler, filters
 
 from cascade_api.memory import MemoryClient
 from cascade_api.config import BotConfig
-from cascade_api.handlers import make_message_handler, make_export_handler
+from cascade_api.handlers import make_message_handler, make_export_handler, make_privacy_handler
 
 logger = logging.getLogger(__name__)
 
@@ -20,8 +20,10 @@ async def create_bot_app(
 
     message_handler = make_message_handler(config, memory_client)
     export_handler = make_export_handler(config, memory_client)
+    privacy_handler = make_privacy_handler(config)
 
     app.add_handler(CommandHandler("export", export_handler))
+    app.add_handler(CommandHandler("privacy", privacy_handler))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
 
     return app

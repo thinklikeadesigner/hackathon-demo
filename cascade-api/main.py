@@ -12,6 +12,7 @@ from cascade_api.memory.stores.memory import InMemoryStore
 from cascade_api.memory.embedders.fake import FakeEmbedder
 
 from cascade_api.config import load_bot_configs
+from cascade_api.consent import ConsentConfig, get_consent, set_consent, _consent_configs
 from cascade_api.ingest import ingest_persona
 from cascade_api.ingest_supabase import ingest_from_supabase
 from cascade_api.multi_bot import run_all_bots
@@ -38,6 +39,7 @@ def save_store_cache(store: InMemoryStore):
         "_tenant_memories": store._tenant_memories,
         "_links": store._links,
         "_embedding_dims": store._embedding_dims,
+        "_consent": {tid: c.to_dict() for tid, c in _consent_configs.items()},
     }
     with open(CACHE_FILE, "wb") as f:
         pickle.dump(data, f)
@@ -59,6 +61,10 @@ def load_store_cache() -> InMemoryStore | None:
         total = len(store._memories)
         embedded = sum(1 for m in store._memories.values() if m.embedding is not None)
         logger.info(f"Loaded cache: {total} memories ({embedded} with embeddings)")
+        # Restore consent configs
+        for tid, cdata in data.get("_consent", {}).items():
+            set_consent(tid, ConsentConfig.from_dict(cdata))
+        logger.info(f"Restored consent configs for {len(data.get('_consent', {}))} tenants")
         return store
     except Exception as e:
         logger.warning(f"Failed to load cache: {e}")
