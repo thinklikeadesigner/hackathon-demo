@@ -324,6 +324,9 @@
 <div id="badge">portable memory format v0.1</div>
 
 <script>
+const PRIVATE_COLOR = '#555';
+const SENSITIVE_TAGS = new Set(['therapy','anxiety','mental_health','finance','salary','debt']);
+
 const SOURCE_COLORS = {
   calendar: '#4fc3f7',
   email:    '#66bb6a',
@@ -334,6 +337,8 @@ const SOURCE_COLORS = {
   files:    '#ffee58',
   bank:     '#ffa726',
 };
+
+let consentConfig = null;
 
 const SOURCE_LABELS = {
   calendar: 'Calendar', email: 'Email', finance: 'Finance',
@@ -365,13 +370,34 @@ function extractSource(memoryType) {
   return 'files';
 }
 
+function isPrivateNode(node) {
+  if (!consentConfig) return false;
+  const sources = consentConfig.sources || {};
+  // Check if source-level consent is owner_only
+  if (sources[node.source] === 'owner_only') return true;
+  // Check sensitive tags
+  if (node.tags && node.tags.some(t => SENSITIVE_TAGS.has(t))) return true;
+  return false;
+}
+
 function getColor(source) {
   return SOURCE_COLORS[source] || '#888';
 }
 
+function getNodeColor(node) {
+  return isPrivateNode(node) ? PRIVATE_COLOR : getColor(node.source);
+}
+
 // Build legend
 const legendEl = document.getElementById('legend');
-['calendar','email','finance','lifelog','ai_chat','social','files'].forEach(s => {
+['calendar','email','finance','lifelog','ai_chat','social','files','private'].forEach(s => {
+  if (s === 'private') {
+    const item = document.createElement('div');
+    item.className = 'legend-item';
+    item.innerHTML = `<div class="legend-dot" style="background:${PRIVATE_COLOR}"></div>Private`;
+    legendEl.appendChild(item);
+    return;
+  }
   const item = document.createElement('div');
   item.className = 'legend-item';
   item.innerHTML = `<div class="legend-dot" style="background:${getColor(s)}"></div>${SOURCE_LABELS[s]}`;
@@ -386,6 +412,9 @@ let selectedNode = null;
 
 function initGraph(data) {
   document.getElementById('empty-state').style.display = 'none';
+
+  // Load consent config if present in export
+  consentConfig = data.consent || null;
 
   const memories = data.memories || [];
   const links = (data.links || []).slice();
@@ -580,13 +609,25 @@ function renderGraph() {
       .on('drag', dragged)
       .on('end', dragEnded));
 
+  // Private glow filter (gray)
+  const privateGlow = defs.append('filter')
+    .attr('id', 'glow-private')
+    .attr('x', '-50%').attr('y', '-50%')
+    .attr('width', '200%').attr('height', '200%');
+  privateGlow.append('feGaussianBlur').attr('stdDeviation', '3').attr('result', 'blur');
+  privateGlow.append('feFlood').attr('flood-color', PRIVATE_COLOR).attr('flood-opacity', '0.4').attr('result', 'color');
+  privateGlow.append('feComposite').attr('in', 'color').attr('in2', 'blur').attr('operator', 'in').attr('result', 'glow');
+  const pMerge = privateGlow.append('feMerge');
+  pMerge.append('feMergeNode').attr('in', 'glow');
+  pMerge.append('feMergeNode').attr('in', 'SourceGraphic');
+
   // Outer dashed ring for hub nodes
   nodeEls.filter(d => isHub(d))
     .append('circle')
     .attr('class', 'node-ring')
     .attr('r', d => nodeRadius(d) + 3)
     .attr('fill', 'none')
-    .attr('stroke', d => getColor(d.source))
+    .attr('stroke', d => getNodeColor(d))
     .attr('stroke-width', 1)
     .attr('stroke-opacity', 0.3)
     .attr('stroke-dasharray', '3,3');
@@ -595,9 +636,9 @@ function renderGraph() {
   nodeEls.append('circle')
     .attr('class', 'node-main')
     .attr('r', d => nodeRadius(d))
-    .attr('fill', d => getColor(d.source))
-    .attr('filter', d => `url(#glow-${d.source})`)
-    .attr('stroke', d => d3.color(getColor(d.source)).brighter(0.5))
+    .attr('fill', d => getNodeColor(d))
+    .attr('filter', d => isPrivateNode(d) ? 'url(#glow-private)' : `url(#glow-${d.source})`)
+    .attr('stroke', d => d3.color(getNodeColor(d)).brighter(0.5))
     .attr('stroke-width', d => isHub(d) ? 2 : 0.5)
     .attr('stroke-opacity', 0.4);
 
@@ -701,7 +742,7 @@ function handleHover(event, d) {
     .attr('stroke', l => {
       const sid = typeof l.source === 'object' ? l.source.id : l.source;
       const tid = typeof l.target === 'object' ? l.target.id : l.target;
-      return (sid === d.id || tid === d.id) ? getColor(d.source) : (RELATION_COLORS[l.type] || 'rgba(255,255,255,0.06)');
+      return (sid === d.id || tid === d.id) ? getNodeColor(d) : (RELATION_COLORS[l.type] || 'rgba(255,255,255,0.06)');
     });
 
   d3.select(event.currentTarget).select('.node-main').attr('filter', 'url(#glow-hover)');
@@ -731,7 +772,7 @@ function handleHoverOut(event) {
     .attr('stroke-width', d => d.type === 'follow_up' || d.type === 'implements' ? 1.5 : 1);
 
   nodeEls.each(function(d) {
-    d3.select(this).select('.node-main').attr('filter', `url(#glow-${d.source})`);
+    d3.select(this).select('.node-main').attr('filter', isPrivateNode(d) ? 'url(#glow-private)' : `url(#glow-${d.source})`);
   });
 
   if (!selectedNode) {
@@ -755,8 +796,9 @@ function showInfoPanel(d) {
 
   const sourceLabel = SOURCE_LABELS[d.source] || d.source;
   const typeEl = document.getElementById('panel-type');
-  typeEl.textContent = `${d.memory_type || sourceLabel} · ${d.connections} connections`;
-  typeEl.style.color = getColor(d.source);
+  const privLabel = isPrivateNode(d) ? ' · OWNER ONLY' : '';
+  typeEl.textContent = `${d.memory_type || sourceLabel} · ${d.connections} connections${privLabel}`;
+  typeEl.style.color = getNodeColor(d);
 
   document.getElementById('panel-label').textContent = d.content || '(empty)';
 
