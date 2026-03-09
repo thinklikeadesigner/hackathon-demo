@@ -1,6 +1,6 @@
 import aiohttp
 
-from cascade_memory import SearchResult
+from cascade_api.memory import SearchResult
 
 
 OLLAMA_URL = "http://localhost:11434/api/chat"

@@ -5,7 +5,7 @@ from io import BytesIO
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from cascade_memory import MemoryClient
+from cascade_api.memory import MemoryClient
 from cascade_api.config import BotConfig
 from cascade_api.permissions import filter_by_permission
 from cascade_api.synthesize import synthesize_answer

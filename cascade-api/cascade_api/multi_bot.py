@@ -4,7 +4,7 @@ import logging
 from telegram import Update
 from telegram.ext import Application, MessageHandler, CommandHandler, filters
 
-from cascade_memory import MemoryClient
+from cascade_api.memory import MemoryClient
 from cascade_api.config import BotConfig
 from cascade_api.handlers import make_message_handler, make_export_handler
 

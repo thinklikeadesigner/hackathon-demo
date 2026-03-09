@@ -4,7 +4,7 @@ import logging
 import random
 from pathlib import Path
 
-from cascade_memory import MemoryClient
+from cascade_api.memory import MemoryClient
 from cascade_api.permissions import classify_sensitivity
 
 logger = logging.getLogger(__name__)

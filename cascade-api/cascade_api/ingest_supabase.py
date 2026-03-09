@@ -3,7 +3,7 @@
 import logging
 from supabase import Client as SupabaseClient
 
-from cascade_memory import MemoryClient
+from cascade_api.memory import MemoryClient
 
 logger = logging.getLogger(__name__)
 

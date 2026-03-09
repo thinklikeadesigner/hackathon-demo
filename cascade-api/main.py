@@ -7,9 +7,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from cascade_memory import MemoryClient
-from cascade_memory.stores.memory import InMemoryStore
-from cascade_memory.embedders.fake import FakeEmbedder
+from cascade_api.memory import MemoryClient
+from cascade_api.memory.stores.memory import InMemoryStore
+from cascade_api.memory.embedders.fake import FakeEmbedder
 
 from cascade_api.config import load_bot_configs
 from cascade_api.ingest import ingest_persona

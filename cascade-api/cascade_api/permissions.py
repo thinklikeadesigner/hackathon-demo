@@ -1,4 +1,4 @@
-from cascade_memory import SearchResult
+from cascade_api.memory import SearchResult
 
 PRIVATE_SOURCES = {"bank", "ai_chat"}
 PRIVATE_TAGS = {"therapy", "anxiety", "mental_health", "finance", "salary", "debt"}

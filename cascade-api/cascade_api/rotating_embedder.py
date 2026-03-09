@@ -1,7 +1,7 @@
 """GeminiEmbedder wrapper that rotates between multiple API keys on rate limit."""
 import logging
 
-from cascade_memory.embedders.gemini import GeminiEmbedder
+from cascade_api.memory.embedders.gemini import GeminiEmbedder
 
 logger = logging.getLogger(__name__)
 
