@@ -59,9 +59,6 @@ The demo walks through 8 stages: ingestion, permission filtering, consent contro
 
 **Runtime:** Python 3.12, fully local (Ollama) — no cloud API keys required for core demo
 
-<details>
-<summary>Component table</summary>
-
 | Component | Technology |
 |-----------|-----------|
 | LLM (synthesis + extraction) | Ollama / qwen3:8b (local) |
@@ -72,7 +69,17 @@ The demo walks through 8 stages: ingestion, permission filtering, consent contro
 | Data format | JSONL (hackathon dataset) + Portable Memory Format JSON |
 | Optional cloud store | Supabase + pgvector (production path) |
 
-</details>
+---
+
+## Datasets
+
+**Primary:** Hackathon-provided synthetic persona datasets (5 personas, 8 sources each)
+- Source: [Google Drive — Data Portability Hackathon 2026](https://drive.google.com/drive/folders/1TEWhdzff-FgkDNY-53IDXIWaPZQ7_5F3)
+- Personas used: **p01 (Jordan Lee)**, **p02 (Maya Patel)**, **p05 (Theo Nakamura)**
+- ~530 records per persona across: lifelog, email, calendar, social posts, transactions, AI conversations, file metadata
+- Each record includes `refs` for cross-source linking
+
+**Secondary:** Live Cascade user data from Supabase (goals, tasks, tracker entries, adaptations) ingested into the "You" bot's memory.
 
 ---
 
@@ -80,41 +87,46 @@ The demo walks through 8 stages: ingestion, permission filtering, consent contro
 
 ### 1. Ingestion Pipeline
 
-530 records from 8 sources — classified by sensitivity, embedded, saved, and cross-linked via `refs` fields and semantic similarity.
+Each persona's JSONL files are loaded, classified by sensitivity (`public_email`, `private_finance`, etc.), embedded via nomic-embed-text, and saved to the memory store. Cross-references from the `refs` field create explicit `cross_reference` links. A second pass samples memories and creates semantic `related` links across different source types (e.g., a calendar meeting linked to the email that scheduled it).
 
 <img width="530" alt="Ingestion — 530 records from 8 sources embedded and cross-linked" src="https://github.com/user-attachments/assets/dda27f59-9cc1-400d-84f4-9abb1fc9a44d" />
 
 ### 2. Permission Layer
 
-Same query, three access levels: owner DM (full access), group chat (public only), stranger (blocked).
+Every memory gets a type like `private_ai_chat` or `public_social`. When a query comes in, the system checks context:
+- **Owner DM**: Full access to all memories
+- **Group chat**: Only `public_*` memories returned
+- **Stranger DM**: Blocked entirely
+
+This means Jordan's therapy notes and bank statements never surface in group conversations — only his public calendar events and social posts.
 
 <img width="476" alt="Telegram group chat — all 3 bots refuse to share financial data in public" src="https://github.com/user-attachments/assets/a6c659b3-6cba-4427-b590-023dd3bbcb8f" />
 
 ### 3. Consent Controls
 
-`/privacy set <source> <level>` changes sharing at runtime — sensitive tags (therapy, salary, medical) stay private regardless.
+Users change privacy settings at runtime with `/privacy set <source> <level>`. Sensitive tags (therapy, salary, medical) are always private regardless of source setting.
 
-<img width="352" height="354" alt="Screenshot 2026-03-10 at 1 13 25 AM" src="https://github.com/user-attachments/assets/f224b366-384d-4043-add8-63cfd2f0bf7a" />
+<img width="700" alt="Consent dashboard — per-source privacy controls" src="https://github.com/user-attachments/assets/b4cbba30-b20f-4031-84d5-731a6da2bc9a" />
 
 ### 4. Recall + Synthesis
 
-Semantic search with decay scoring, synthesized into natural language answers with source attribution via local LLM.
+Questions are embedded and matched against the memory store using cosine similarity, weighted by decay score and confidence. The top results are passed to a local LLM (qwen3:8b) along with the persona's core memory profile to synthesize a natural answer. Source attribution is included (calendar, email, lifelog, etc.).
 
 <img width="527" alt="Natural language answer with source attribution" src="https://github.com/user-attachments/assets/afab999e-738b-49a4-ac4b-aafdb3909684" />
 
 ### 5. Interoperability — Import from Anywhere
 
-Google Takeout (`.zip`, `.ics`, `.mbox`) and ChatGPT (`conversations.json`) — imported, classified, embedded, and cross-linked automatically.
+Cascade imports data from multiple real-world export formats: Google Takeout (`.zip`, `.ics`, `.mbox`) and ChatGPT (`conversations.json`). Imported records are automatically classified, embedded, and cross-linked to existing memories.
 
 <img width="486" alt="Telegram — importing a 6.6MB Google Takeout zip: 486 records imported, 11 cross-source links created" src="https://github.com/user-attachments/assets/55cc2760-9bdd-4602-92f3-2d9cef179a60" />
 
 ### 6. Memory Extraction + Auto-Linking
 
-New conversations are extracted into facts, embedded, and auto-linked to related memories — the graph grows with every message.
+When the owner tells the bot something new, the conversation is sent to an extractor that pulls out facts, preferences, patterns, and goals. Each extracted memory is embedded, saved, and automatically linked to similar existing memories. The graph grows with every conversation.
 
 ### 7. Portable Export
 
-`/export` dumps the full memory graph as a self-contained **Portable Memory Format** JSON — loadable in the graph visualizer or another system.
+`/export` dumps the full memory graph as JSON: core memory, all archival memories with metadata, and all links. This is the **Portable Memory Format** — a self-contained file that can be loaded into the graph visualizer or imported into another system.
 
 <img width="526" alt="Telegram /export — full memory graph as portable JSON file" src="https://github.com/user-attachments/assets/5fc20789-02e4-4746-83d2-1b91f7890d16" />
 
@@ -149,29 +161,7 @@ Link types: `cross_reference`, `related`, `part_of`, `supports`, `contradicts`, 
 
 ---
 
-## Team
-
-| Name | Role | Contact |
-|------|------|---------|
-| Rebecca Burch | Solo Engineer | [LinkedIn](https://www.linkedin.com/in/rebecca-burch/) |
-
----
-
-<details>
-<summary>Datasets</summary>
-
-**Primary:** Hackathon-provided synthetic persona datasets (5 personas, 8 sources each)
-- Source: [Google Drive — Data Portability Hackathon 2026](https://drive.google.com/drive/folders/1TEWhdzff-FgkDNY-53IDXIWaPZQ7_5F3)
-- Personas used: **p01 (Jordan Lee)**, **p02 (Maya Patel)**, **p05 (Theo Nakamura)**
-- ~530 records per persona across: lifelog, email, calendar, social posts, transactions, AI conversations, file metadata
-- Each record includes `refs` for cross-source linking
-
-**Secondary:** Live Cascade user data from Supabase (goals, tasks, tracker entries, adaptations) ingested into the "You" bot's memory.
-
-</details>
-
-<details>
-<summary>Known Limitations & Next Steps</summary>
+## Known Limitations & Next Steps
 
 ### Limitations
 - **In-memory store**: Demo uses pickle-cached InMemoryStore. Not suitable for production at scale (Supabase + pgvector store exists but wasn't used for the demo to keep it fully local).
@@ -186,10 +176,9 @@ Link types: `cross_reference`, `related`, `part_of`, `supports`, `contradicts`, 
 - Portable Memory Format spec formalization for cross-system interoperability
 - Additional importers: Apple Health, Fitbit, banking CSV exports
 
-</details>
+---
 
-<details>
-<summary>Project Structure</summary>
+## Project Structure
 
 ```
 cascade-api/
@@ -225,10 +214,17 @@ cascade-api/
 └── data/personadata/personas/       # Hackathon synthetic persona datasets
 ```
 
-</details>
+---
 
-<details>
-<summary>Running the Telegram Bots</summary>
+## Team
+
+| Name | Role | Contact |
+|------|------|---------|
+| Rebecca Burch | Solo Engineer | [LinkedIn](https://www.linkedin.com/in/rebecca-burch/) |
+
+---
+
+## Running the Telegram Bots
 
 To run the full multi-bot system with 4 personas:
 
@@ -269,8 +265,6 @@ SUPABASE_SERVICE_KEY=eyJ...
    - Run `/export` in DM with any bot to get the full memory JSON
    - Run `/insights` to generate cross-source pattern analysis
 6. Open `static/graph.html` in a browser and load the exported JSON to visualize the memory graph
-
-</details>
 
 ---
 
