@@ -1,0 +1,72 @@
+# User data (never commit personal information)
+data/
+
+# OS files
+.DS_Store
+*.swp
+*~
+
+# Editor files
+.vscode/
+.idea/
+.obsidian/
+
+# Calendar exports
+calendar/
+
+# Dependencies
+node_modules/
+
+# Build artifacts
+outputs/
+
+# Local tools
+tools/
+
+# Product research
+product-research/
+cascade-research/
+research/
+docs/
+*.pptx
+
+# Diagrams
+*.excalidraw
+*.canvas
+
+# Referral
+referral link.md
+
+# Python
+__pycache__/
+*.pyc
+.venv*/
+*.egg-info/
+dist/
+.pytest_cache/
+.ruff_cache/
+
+# Environment
+.env
+.env.local
+
+# Claude Code
+.claude/
+
+# cascade-memory (now part of cascade-api)
+/cascade-memory/
+
+# Supabase local
+supabase/.temp/
+
+# Lock files (each subpackage manages its own)
+uv.lock
+
+# Deploy notes with secrets
+DEPLOY-STATUS.md
+
+
+
+
+# Ignore Smart Environment folder
+.smart-env
