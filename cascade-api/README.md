@@ -32,7 +32,10 @@ cp .env.example .env
 
 # Persona datasets are included in data/personadata/personas/
 
-# Run
+# Run the CLI demo (no Telegram setup needed)
+python demo.py
+
+# Or run the full Telegram multi-bot system
 python main.py
 ```
 
