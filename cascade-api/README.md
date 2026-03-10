@@ -137,7 +137,7 @@ Every memory gets a type like `private_ai_chat` or `public_social`. When a query
 
 This means Jordan's therapy notes and bank statements never surface in group conversations — only his public calendar events and social posts.
 
-<img width="486" alt="Telegram group chat — all 3 bots refuse to share financial data in public" src="https://github.com/user-attachments/assets/55cc2760-9bdd-4602-92f3-2d9cef179a60" />
+<img width="476" alt="Telegram group chat — all 3 bots refuse to share financial data in public" src="https://github.com/user-attachments/assets/a6c659b3-6cba-4427-b590-023dd3bbcb8f" />
 
 ### 3. Consent Controls
 
@@ -151,17 +151,17 @@ Questions are embedded and matched against the memory store using cosine similar
 
 <img width="527" alt="Natural language answer with source attribution" src="https://github.com/user-attachments/assets/afab999e-738b-49a4-ac4b-aafdb3909684" />
 
-### 5. Memory Extraction + Auto-Linking
+### 5. Interoperability — Import from Anywhere
 
-When the owner tells the bot something new, the conversation is sent to an extractor that pulls out facts, preferences, patterns, and goals. Each extracted memory is embedded, saved, and automatically linked to similar existing memories (threshold 0.4). The graph grows with every conversation.
+Cascade imports data from multiple real-world export formats: Google Takeout (`.zip`, `.ics`, `.mbox`) and ChatGPT (`conversations.json`). Imported records are automatically classified, embedded, and cross-linked to existing memories.
 
-<img width="700" alt="Memory extraction — new facts extracted and auto-linked" src="https://github.com/user-attachments/assets/87c009cb-5619-447b-a04f-c1c592020cbb" />
+<img width="486" alt="Telegram — importing a 6.6MB Google Takeout zip: 486 records imported, 11 cross-source links created" src="https://github.com/user-attachments/assets/55cc2760-9bdd-4602-92f3-2d9cef179a60" />
 
-<img width="700" alt="Cross-source links created between imported and existing memories" src="https://github.com/user-attachments/assets/e604af38-212f-4495-b16d-41b6d943e2e5" />
+### 6. Memory Extraction + Auto-Linking
 
-<img width="476" alt="Telegram — importing a Google Takeout zip and generating cross-source insights" src="https://github.com/user-attachments/assets/a6c659b3-6cba-4427-b590-023dd3bbcb8f" />
+When the owner tells the bot something new, the conversation is sent to an extractor that pulls out facts, preferences, patterns, and goals. Each extracted memory is embedded, saved, and automatically linked to similar existing memories. The graph grows with every conversation.
 
-### 6. Portable Export
+### 7. Portable Export
 
 `/export` dumps the full memory graph as JSON: core memory, all archival memories with metadata, and all links. This is the **Portable Memory Format** — a self-contained file that can be loaded into the graph visualizer or imported into another system.
 
