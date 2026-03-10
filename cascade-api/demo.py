@@ -17,20 +17,21 @@ from pathlib import Path
 
 logging.basicConfig(level=logging.WARNING)
 
-# ── Styling ─────────────────────────────────────────────────────
+# ── Styling (bright variants for dark terminal readability) ──────
 BOLD = "\033[1m"
 DIM = "\033[2m"
-GREEN = "\033[32m"
-YELLOW = "\033[33m"
-CYAN = "\033[36m"
-RED = "\033[31m"
-MAGENTA = "\033[35m"
-WHITE = "\033[37m"
-BG_RED = "\033[41m"
-BG_GREEN = "\033[42m"
-BG_YELLOW = "\033[43m"
-BG_BLUE = "\033[44m"
-BG_MAGENTA = "\033[45m"
+GREEN = "\033[92m"       # bright green
+YELLOW = "\033[93m"      # bright yellow
+CYAN = "\033[96m"        # bright cyan
+RED = "\033[91m"         # bright red
+MAGENTA = "\033[95m"     # bright magenta
+WHITE = "\033[97m"       # bright white
+BLACK = "\033[30m"       # black text for badges
+BG_RED = "\033[101m"     # bright red bg
+BG_GREEN = "\033[102m"   # bright green bg
+BG_YELLOW = "\033[103m"  # bright yellow bg
+BG_BLUE = "\033[104m"    # bright blue bg
+BG_MAGENTA = "\033[105m" # bright magenta bg
 RESET = "\033[0m"
 
 AUTO = "--auto" in sys.argv
@@ -98,7 +99,7 @@ def mem_line(memory_type, content, sim=None):
     badge_color = BG_RED if is_private else BG_GREEN
     badge_text = f" {source.upper()} "
     sim_text = f" {DIM}({sim:.0%}){RESET}" if sim else ""
-    print(f"  {badge_color}{BOLD}{badge_text}{RESET}{sim_text} {content[:75]}")
+    print(f"  {badge_color}{BLACK}{BOLD}{badge_text}{RESET}{sim_text} {content[:75]}")
 
 
 def blocked():
@@ -302,7 +303,7 @@ async def main():
 
     for q, ctx in queries:
         print()
-        ctx_badge = f"{BG_BLUE} {ctx.upper()} {RESET}" if ctx == "dm_owner" else f"{BG_YELLOW}{BOLD} {ctx.upper()} {RESET}"
+        ctx_badge = f"{BG_BLUE}{BLACK}{BOLD} {ctx.upper()} {RESET}" if ctx == "dm_owner" else f"{BG_YELLOW}{BLACK}{BOLD} {ctx.upper()} {RESET}"
         show(f"  {ctx_badge} \"{q}\"")
 
         r = await tenant.recall(q, count=15, threshold=0.1)
