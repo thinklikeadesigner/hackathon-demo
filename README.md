@@ -306,3 +306,10 @@ SUPABASE_SERVICE_KEY=eyJ...
 ## License
 
 MIT
+<img width="526" height="176" alt="Screenshot 2026-03-10 at 12 48 16 AM" src="https://github.com/user-attachments/assets/5fc20789-02e4-4746-83d2-1b91f7890d16" />
+<img width="476" height="298" alt="Screenshot 2026-03-10 at 12 48 42 AM" src="https://github.com/user-attachments/assets/a6c659b3-6cba-4427-b590-023dd3bbcb8f" />
+<img width="1689" height="871" alt="Screenshot 2026-03-10 at 12 48 57 AM" src="https://github.com/user-attachments/assets/c4e2e875-923b-469c-b8f4-a77e666bb2ce" />
+
+
+<img width="486" height="272" alt="Screenshot 2026-03-10 at 12 48 28 AM" src="https://github.com/user-attachments/assets/55cc2760-9bdd-4602-92f3-2d9cef179a60" />
+
