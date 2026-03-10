@@ -8,10 +8,19 @@
 
 ## **[Live Graph Visualization](https://thinklikeadesigner.github.io/hackathon-demo/)** | **[Demo Video (3 min)](https://www.youtube.com/watch?v=SZO1RZ4dV8s)**
 
-<img width="700" alt="Knowledge graph visualization — 530 memories from 8 sources with consent controls and cross-source links" src="https://github.com/user-attachments/assets/c4e2e875-923b-469c-b8f4-a77e666bb2ce" />
-
 
 ---
+
+## What It Does
+
+Cascade Memory takes the data a person could export today — emails, calendar events, bank transactions, AI conversations, social posts, lifelogs, file metadata — and turns it into a unified, queryable knowledge graph they actually own. Each memory is classified by sensitivity, embedded for semantic search, and linked to related memories across sources. A permission layer controls access: your therapist notes never leak into group chat answers.
+
+<img width="700" alt="Knowledge graph visualization — 530 memories from 8 sources with consent controls and cross-source links" src="https://github.com/user-attachments/assets/c4e2e875-923b-469c-b8f4-a77e666bb2ce" />
+
+The demo runs 4 Telegram bots, each representing a different person's memory. Ask Jordan about his calendar and the bot searches his memory, filters by permission context, and synthesizes an answer. Tell the "You" bot something new and it extracts facts, embeds them, auto-links them to related memories, and persists everything — building a living knowledge graph from conversation.
+
+---
+
 
 ## Quick Start
 
