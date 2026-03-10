@@ -30,8 +30,7 @@ ollama pull nomic-embed-text
 cp .env.example .env
 # Edit .env with your Telegram bot tokens (see below)
 
-# Download persona datasets into data/personadata/personas/
-# From: https://drive.google.com/drive/folders/1TEWhdzff-FgkDNY-53IDXIWaPZQ7_5F3
+# Persona datasets are included in data/personadata/personas/
 
 # Run
 python main.py
@@ -56,7 +55,7 @@ SUPABASE_SERVICE_KEY=eyJ...
 
 1. Create 4 Telegram bots via [@BotFather](https://t.me/BotFather) and add tokens to `.env`
 2. Get your Telegram chat ID (message [@userinfobot](https://t.me/userinfobot))
-3. Place persona data in `../data/personadata/personas/persona_p01/`, etc.
+3. Persona datasets are already included in `data/personadata/personas/`
 4. Run `python main.py` — first run takes ~60s to ingest and embed all records
 5. Message any bot in Telegram. Try:
    - Ask Jordan: *"What meetings do I have this week?"*
