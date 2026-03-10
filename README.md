@@ -56,45 +56,7 @@ The demo walks through 8 stages: ingestion, permission filtering, consent contro
 
 ## Tech Stack & Architecture
 
-```
-┌──────────────────────────────────────────────────────────┐
-│                    TELEGRAM BOTS                         │
-│  Jordan (p01) │ Maya (p02) │ Theo (p05) │ You (k2)      │
-└───────┬──────────────┬──────────────┬──────────────┬─────┘
-        │              │              │              │
-        └──────────────┴──────┬───────┴──────────────┘
-                              │
-                 ┌────────────▼────────────┐
-                 │     MESSAGE HANDLER     │
-                 │  context → recall →     │
-                 │  permission filter →    │
-                 │  synthesize → extract   │
-                 └────────────┬────────────┘
-                              │
-          ┌───────────────────┼───────────────────┐
-          │                   │                   │
-  ┌───────▼───────┐  ┌───────▼───────┐  ┌───────▼───────┐
-  │  PERMISSION   │  │ MEMORY CLIENT │  │   SYNTHESIS   │
-  │    LAYER      │  │  save/recall/ │  │   (Ollama)    │
-  │ public/private│  │  extract/link │  │   qwen3:8b    │
-  │ dm/group gate │  │  decay scores │  │               │
-  └───────────────┘  └───────┬───────┘  └───────────────┘
-                             │
-              ┌──────────────┼──────────────┐
-              │              │              │
-      ┌───────▼──────┐ ┌────▼─────┐ ┌──────▼──────┐
-      │  EMBEDDER    │ │ STORE    │ │ EXTRACTOR   │
-      │ nomic-embed  │ │ InMemory │ │ Ollama LLM  │
-      │ (Ollama)     │ │ +pickle  │ │ fact/pattern │
-      │ 768 dims     │ │ cache    │ │ extraction  │
-      └──────────────┘ └──────────┘ └─────────────┘
-                             │
-                    ┌────────▼────────┐
-                    │  GRAPH VISUAL   │
-                    │  D3.js force    │
-                    │  graph.html     │
-                    └─────────────────┘
-```
+<img width="740" height="453" alt="Screenshot 2026-03-10 at 1 41 34 AM" src="https://github.com/user-attachments/assets/d437a6c8-e365-4ec2-9574-f5b369c8fcb5" />
 
 **Runtime:** Python 3.12, fully local (Ollama) — no cloud API keys required for core demo
 
