@@ -12,6 +12,7 @@
 
 ## What It Does
 
+
 Cascade Memory takes the data a person could export today — emails, calendar events, bank transactions, AI conversations, social posts, lifelogs, file metadata — and turns it into a unified, queryable knowledge graph they actually own. Each memory is classified by sensitivity, embedded for semantic search, and linked to related memories across sources. A permission layer controls access: your therapist notes never leak into group chat answers.
 
 <img width="700" alt="Knowledge graph visualization — 530 memories from 8 sources with consent controls and cross-source links" src="https://github.com/user-attachments/assets/c4e2e875-923b-469c-b8f4-a77e666bb2ce" />
@@ -56,7 +57,8 @@ The demo walks through 8 stages: ingestion, permission filtering, consent contro
 
 ## Tech Stack & Architecture
 
-<img width="740" height="453" alt="Screenshot 2026-03-10 at 1 41 34 AM" src="https://github.com/user-attachments/assets/d437a6c8-e365-4ec2-9574-f5b369c8fcb5" />
+<img width="641" height="467" alt="Screenshot 2026-03-10 at 2 06 54 AM" src="https://github.com/user-attachments/assets/2e338b53-3860-4c81-bf48-1253be35ce58" />
+
 
 **Runtime:** Python 3.12, fully local (Ollama) — no cloud API keys required for core demo
 
