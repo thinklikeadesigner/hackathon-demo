@@ -10,6 +10,13 @@ The demo runs 4 Telegram bots, each representing a different person's memory. As
 
 ---
 
+
+
+
+## [Demo Link](https://thinklikeadesigner.github.io/hackathon-demo/)
+
+
+
 ## Quick Start
 
 ```bash
@@ -36,55 +43,12 @@ python demo.py
 
 ```bash
 python demo.py          # Interactive — press Enter between steps
-python demo.py --auto   # Auto-advance with pauses (for video recording)
+python demo.py --auto   # Auto-advance with pauses
 python demo.py --fast   # Skip LLM synthesis (quick test run)
 ```
 
 The demo walks through 8 stages: ingestion, permission filtering, consent controls, LLM synthesis, Google Calendar + ChatGPT import, cross-source insights, portable export, and right to erasure. No Telegram tokens or API keys needed — just Ollama.
 
-### Running the Telegram Bots
-
-To run the full multi-bot system with 4 personas:
-
-```bash
-cp .env.example .env
-# Edit .env with your Telegram bot tokens (see below)
-python main.py
-```
-
-### Required Environment Variables (Telegram only)
-
-```bash
-# Telegram bots (create via @BotFather)
-TELEGRAM_BOT_TOKEN_JORDAN=...   # Persona p01
-TELEGRAM_BOT_TOKEN_MAYA=...     # Persona p02
-TELEGRAM_BOT_TOKEN_THEO=...     # Persona p05
-TELEGRAM_BOT_TOKEN_YOU=...      # Your personal bot
-TELEGRAM_OWNER_CHAT_ID=...      # Your Telegram user ID
-
-# Optional: Supabase (for enriched export with goals/tasks)
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_SERVICE_KEY=eyJ...
-```
-
-### Reproducing the Demo
-
-1. Create 4 Telegram bots via [@BotFather](https://t.me/BotFather) and add tokens to `.env`
-2. Get your Telegram chat ID (message [@userinfobot](https://t.me/userinfobot))
-3. Persona datasets are already included in `data/personadata/personas/`
-4. Run `python main.py` — first run takes ~60s to ingest and embed all records
-5. Message any bot in Telegram. Try:
-   - Ask Jordan: *"What meetings do I have this week?"*
-   - Ask Maya: *"How am I feeling about residency?"*
-   - Tell You bot: *"I just signed a new client today"*
-   - Run `/privacy` to view/change per-source consent settings
-   - Run `/import` and attach a file (`.ics`, `.mbox`, `.zip`, or ChatGPT `conversations.json`)
-   - Run `/forget therapy sessions` to exercise right-to-erasure
-   - Run `/export` in DM with any bot to get the full memory JSON
-   - Run `/insights` to generate cross-source pattern analysis
-6. Open `static/graph.html` in a browser and load the exported JSON to visualize the memory graph
-
----
 
 ## Tech Stack & Architecture
 
@@ -153,11 +117,14 @@ SUPABASE_SERVICE_KEY=eyJ...
 **Secondary:** Live Cascade user data from Supabase (goals, tasks, tracker entries, adaptations) ingested into the "You" bot's memory.
 
 ---
+<img width="637" height="276" alt="Screenshot 2026-03-10 at 12 07 12 AM" src="https://github.com/user-attachments/assets/2b245c1a-798a-4465-8117-ece2ba183bb1" />
 
 ## How It Works
 
 ### 1. Ingestion Pipeline
 Each persona's JSONL files are loaded, classified by sensitivity (`public_email`, `private_finance`, etc.), embedded via nomic-embed-text, and saved to the memory store. Cross-references from the `refs` field create explicit `cross_reference` links. A second pass samples memories and creates semantic `related` links across different source types (e.g., a calendar meeting linked to the email that scheduled it).
+
+<img width="530" height="458" alt="Screenshot 2026-03-10 at 12 05 01 AM" src="https://github.com/user-attachments/assets/dda27f59-9cc1-400d-84f4-9abb1fc9a44d" />
 
 ### 2. Permission Layer
 Every memory gets a type like `private_ai_chat` or `public_social`. When a query comes in, the system checks context:
@@ -167,16 +134,31 @@ Every memory gets a type like `private_ai_chat` or `public_social`. When a query
 
 This means Jordan's therapy notes and bank statements never surface in group conversations — only his public calendar events and social posts.
 
+<img width="784" height="385" alt="Screenshot 2026-03-10 at 12 05 13 AM" src="https://github.com/user-attachments/assets/c84bb5b7-9b24-46c4-b209-d7dbe0084c85" />
+<img width="570" height="382" alt="Screenshot 2026-03-10 at 12 05 26 AM" src="https://github.com/user-attachments/assets/26444739-2c0f-459b-9b49-461725c29aa1" />
+<img width="742" height="297" alt="Screenshot 2026-03-10 at 12 06 58 AM" src="https://github.com/user-attachments/assets/b4cbba30-b20f-4031-84d5-731a6da2bc9a" />
+
 ### 3. Recall + Synthesis
 Questions are embedded and matched against the memory store using cosine similarity, weighted by decay score and confidence. The top results are passed to a local LLM (qwen3:8b) along with the persona's core memory profile to synthesize a natural answer. Source attribution is included (calendar, email, lifelog, etc.).
 
+<img width="527" height="365" alt="Screenshot 2026-03-10 at 12 06 04 AM" src="https://github.com/user-attachments/assets/afab999e-738b-49a4-ac4b-aafdb3909684" />
+
+
 ### 4. Memory Extraction + Auto-Linking
 When the owner tells the bot something new, the conversation is sent to an extractor that pulls out facts, preferences, patterns, and goals. Each extracted memory is embedded, saved, and automatically linked to similar existing memories (threshold 0.4). The graph grows with every conversation.
+
+<img width="863" height="366" alt="Screenshot 2026-03-10 at 12 06 22 AM" src="https://github.com/user-attachments/assets/87c009cb-5619-447b-a04f-c1c592020cbb" />
+<img width="733" height="183" alt="Screenshot 2026-03-10 at 12 06 34 AM" src="https://github.com/user-attachments/assets/e604af38-212f-4495-b16d-41b6d943e2e5" />
+
+
+
 
 ### 5. Portable Export
 `/export` dumps the full memory graph as JSON: core memory, all archival memories with metadata, and all links. This is the **Portable Memory Format** — a self-contained file that can be loaded into the graph visualizer or imported into another system.
 
 ---
+
+<img width="622" height="515" alt="Screenshot 2026-03-10 at 12 06 44 AM" src="https://github.com/user-attachments/assets/fc708e5d-2452-4703-94e9-5f1578be6544" />
 
 ## Portable Memory Format (v0.1)
 
@@ -266,6 +248,50 @@ cascade-api/
 | Name | Role | Contact |
 |------|------|---------|
 | Rebecca Burch | Solo Engineer | [LinkedIn](https://www.linkedin.com/in/rebecca-burch/) |
+
+---
+
+### Running the Telegram Bots like in the demo, full setup
+
+To run the full multi-bot system with 4 personas:
+
+```bash
+cp .env.example .env
+# Edit .env with your Telegram bot tokens (see below)
+python main.py
+```
+
+### Required Environment Variables (Telegram only)
+
+```bash
+# Telegram bots (create via @BotFather)
+TELEGRAM_BOT_TOKEN_JORDAN=...   # Persona p01
+TELEGRAM_BOT_TOKEN_MAYA=...     # Persona p02
+TELEGRAM_BOT_TOKEN_THEO=...     # Persona p05
+TELEGRAM_BOT_TOKEN_YOU=...      # Your personal bot
+TELEGRAM_OWNER_CHAT_ID=...      # Your Telegram user ID
+
+# Optional: Supabase (for enriched export with goals/tasks)
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_KEY=eyJ...
+```
+
+### Reproducing the Demo
+
+1. Create 4 Telegram bots via [@BotFather](https://t.me/BotFather) and add tokens to `.env`
+2. Get your Telegram chat ID (message [@userinfobot](https://t.me/userinfobot))
+3. Persona datasets are already included in `data/personadata/personas/`
+4. Run `python main.py` — first run takes ~60s to ingest and embed all records
+5. Message any bot in Telegram. Try:
+   - Ask Jordan: *"What meetings do I have this week?"*
+   - Ask Maya: *"How am I feeling about residency?"*
+   - Tell You bot: *"I just signed a new client today"*
+   - Run `/privacy` to view/change per-source consent settings
+   - Run `/import` and attach a file (`.ics`, `.mbox`, `.zip`, or ChatGPT `conversations.json`)
+   - Run `/forget therapy sessions` to exercise right-to-erasure
+   - Run `/export` in DM with any bot to get the full memory JSON
+   - Run `/insights` to generate cross-source pattern analysis
+6. Open `static/graph.html` in a browser and load the exported JSON to visualize the memory graph
 
 ---
 
