@@ -1,5 +1,7 @@
 # Cascade Memory Infrastructure
 
+**Team:** Cascade | **Track:** Track 1 — Memory Infrastructure
+
 > A portable, permission-gated personal memory system that ingests scattered digital history, links it semantically across sources, and lets users control who sees what — demonstrated through multi-persona Telegram bots.
 
 ---
