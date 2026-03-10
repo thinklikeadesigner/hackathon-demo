@@ -6,7 +6,7 @@
 
 ---
 
-**[Live Graph Visualization](https://thinklikeadesigner.github.io/hackathon-demo/)** | **[Demo Video (3 min)](https://www.youtube.com/watch?v=SZO1RZ4dV8s)**
+## **[Live Graph Visualization](https://thinklikeadesigner.github.io/hackathon-demo/)** | **[Demo Video (3 min)](https://www.youtube.com/watch?v=SZO1RZ4dV8s)**
 
 ---
 
@@ -143,9 +143,10 @@ This means Jordan's therapy notes and bank statements never surface in group con
 
 ### 3. Consent Controls
 
-Users change privacy settings at runtime with `/privacy set <source> <level>`. Sensitive tags (therapy, salary, medical) are always private regardless of source setting.
+Users change privacy settings at runtime with `/privacy set <source> <level>` or through the UI. Sensitive tags (therapy, salary, medical) are always private regardless of source setting.
 
-<img width="700" alt="Consent dashboard — per-source privacy controls" src="https://github.com/user-attachments/assets/b4cbba30-b20f-4031-84d5-731a6da2bc9a" />
+<img width="352" height="354" alt="Screenshot 2026-03-10 at 1 13 25 AM" src="https://github.com/user-attachments/assets/f224b366-384d-4043-add8-63cfd2f0bf7a" />
+
 
 ### 4. Recall + Synthesis
 
