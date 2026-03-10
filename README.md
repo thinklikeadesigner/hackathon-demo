@@ -12,6 +12,8 @@
 
 Cascade Memory takes the data a person could export today — emails, calendar events, bank transactions, AI conversations, social posts, lifelogs, file metadata — and turns it into a unified, queryable knowledge graph they actually own. Each memory is classified by sensitivity, embedded for semantic search, and linked to related memories across sources. A permission layer controls access: your therapist notes never leak into group chat answers.
 
+<img width="700" alt="Knowledge graph visualization — 530 memories from 8 sources with consent controls and cross-source links" src="https://github.com/user-attachments/assets/c4e2e875-923b-469c-b8f4-a77e666bb2ce" />
+
 The demo runs 4 Telegram bots, each representing a different person's memory. Ask Jordan about his calendar and the bot searches his memory, filters by permission context, and synthesizes an answer. Tell the "You" bot something new and it extracts facts, embeds them, auto-links them to related memories, and persists everything — building a living knowledge graph from conversation.
 
 ---
@@ -135,9 +137,7 @@ Every memory gets a type like `private_ai_chat` or `public_social`. When a query
 
 This means Jordan's therapy notes and bank statements never surface in group conversations — only his public calendar events and social posts.
 
-<img width="700" alt="Permission filtering — same query returns different results by context" src="https://github.com/user-attachments/assets/c84bb5b7-9b24-46c4-b209-d7dbe0084c85" />
-
-<img width="570" alt="Owner DM shows full financial data" src="https://github.com/user-attachments/assets/26444739-2c0f-459b-9b49-461725c29aa1" />
+<img width="486" alt="Telegram group chat — all 3 bots refuse to share financial data in public" src="https://github.com/user-attachments/assets/55cc2760-9bdd-4602-92f3-2d9cef179a60" />
 
 ### 3. Consent Controls
 
@@ -159,11 +159,13 @@ When the owner tells the bot something new, the conversation is sent to an extra
 
 <img width="700" alt="Cross-source links created between imported and existing memories" src="https://github.com/user-attachments/assets/e604af38-212f-4495-b16d-41b6d943e2e5" />
 
+<img width="476" alt="Telegram — importing a Google Takeout zip and generating cross-source insights" src="https://github.com/user-attachments/assets/a6c659b3-6cba-4427-b590-023dd3bbcb8f" />
+
 ### 6. Portable Export
 
 `/export` dumps the full memory graph as JSON: core memory, all archival memories with metadata, and all links. This is the **Portable Memory Format** — a self-contained file that can be loaded into the graph visualizer or imported into another system.
 
-<img width="622" alt="D3.js force-directed graph visualization of the memory export" src="https://github.com/user-attachments/assets/fc708e5d-2452-4703-94e9-5f1578be6544" />
+<img width="526" alt="Telegram /export — full memory graph as portable JSON file" src="https://github.com/user-attachments/assets/5fc20789-02e4-4746-83d2-1b91f7890d16" />
 
 ---
 
@@ -306,10 +308,3 @@ SUPABASE_SERVICE_KEY=eyJ...
 ## License
 
 MIT
-<img width="526" height="176" alt="Screenshot 2026-03-10 at 12 48 16 AM" src="https://github.com/user-attachments/assets/5fc20789-02e4-4746-83d2-1b91f7890d16" />
-<img width="476" height="298" alt="Screenshot 2026-03-10 at 12 48 42 AM" src="https://github.com/user-attachments/assets/a6c659b3-6cba-4427-b590-023dd3bbcb8f" />
-<img width="1689" height="871" alt="Screenshot 2026-03-10 at 12 48 57 AM" src="https://github.com/user-attachments/assets/c4e2e875-923b-469c-b8f4-a77e666bb2ce" />
-
-
-<img width="486" height="272" alt="Screenshot 2026-03-10 at 12 48 28 AM" src="https://github.com/user-attachments/assets/55cc2760-9bdd-4602-92f3-2d9cef179a60" />
-
