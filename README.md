@@ -15,6 +15,8 @@ The demo runs 4 Telegram bots, each representing a different person's memory. As
 
 ## [Demo Link](https://thinklikeadesigner.github.io/hackathon-demo/)
 
+## [Demo Video Walkthrough](https://www.youtube.com/watch?v=SZO1RZ4dV8s)
+
 
 
 ## Quick Start
