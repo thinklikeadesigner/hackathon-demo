@@ -26,20 +26,33 @@ uv pip install -e ".[dev]"
 ollama pull qwen3:8b
 ollama pull nomic-embed-text
 
-# Configure environment
-cp .env.example .env
-# Edit .env with your Telegram bot tokens (see below)
-
 # Persona datasets are included in data/personadata/personas/
 
-# Run the CLI demo (no Telegram setup needed)
+# Run the CLI demo (no Telegram setup needed — just Ollama)
 python demo.py
+```
 
-# Or run the full Telegram multi-bot system
+### CLI Demo Options
+
+```bash
+python demo.py          # Interactive — press Enter between steps
+python demo.py --auto   # Auto-advance with pauses (for video recording)
+python demo.py --fast   # Skip LLM synthesis (quick test run)
+```
+
+The demo walks through 8 stages: ingestion, permission filtering, consent controls, LLM synthesis, Google Calendar + ChatGPT import, cross-source insights, portable export, and right to erasure. No Telegram tokens or API keys needed — just Ollama.
+
+### Running the Telegram Bots
+
+To run the full multi-bot system with 4 personas:
+
+```bash
+cp .env.example .env
+# Edit .env with your Telegram bot tokens (see below)
 python main.py
 ```
 
-### Required Environment Variables
+### Required Environment Variables (Telegram only)
 
 ```bash
 # Telegram bots (create via @BotFather)
