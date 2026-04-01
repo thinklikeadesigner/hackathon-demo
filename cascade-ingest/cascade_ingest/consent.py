@@ -1,16 +1,12 @@
-"""Re-export consent layer from cascade-ingest for backward compatibility."""
+"""User-controlled consent layer for memory sharing.
 
-from cascade_ingest.consent import (  # noqa: F401
-    ALL_SOURCES,
-    DEFAULT_CONSENT,
-    VALID_LEVELS,
-    SENSITIVE_TAGS,
-    ConsentConfig,
-    get_consent,
-    set_consent,
-    extract_source_from_memory_type,
-    _consent_configs,
-)
+Each tenant has a consent config that controls per-source sharing levels:
+  - owner_only: visible only in private DM and personal export
+  - public: visible in group chats and to other apps
+
+The config is stored in the memory store alongside core memory,
+and travels with the Portable Memory Format export.
+"""
 
 import logging
 

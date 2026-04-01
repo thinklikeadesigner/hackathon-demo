@@ -53,8 +53,6 @@ dist/
 # Claude Code
 .claude/
 
-# cascade-memory (now part of cascade-api)
-/cascade-memory/
 
 # Supabase local
 supabase/.temp/

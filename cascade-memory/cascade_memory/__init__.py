@@ -1,14 +1,15 @@
-"""cascade-memory: re-exported from the standalone cascade-memory package."""
+"""cascade-memory: Pluggable memory system for AI agents."""
 
-from cascade_memory import (
-    MemoryClient,
-    TenantScopedClient,
-    CoreMemory,
+from cascade_memory.client import MemoryClient, TenantScopedClient
+from cascade_memory.core import CoreMemory
+from cascade_memory.models import (
+    Contradiction,
+    ExtractedMemory,
+    MemoryLink,
     MemoryRecord,
     SearchResult,
-    MemoryLink,
-    ExtractedMemory,
-    Contradiction,
+)
+from cascade_memory.errors import (
     CascadeMemoryError,
     ConcurrencyError,
     DimensionMismatchError,
