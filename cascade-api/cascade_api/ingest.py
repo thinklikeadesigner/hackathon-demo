@@ -3,9 +3,9 @@ import logging
 import random
 from pathlib import Path
 
-from cascade_api.memory import MemoryClient
-from cascade_api.consent import ConsentConfig, set_consent
-from cascade_api.permissions import classify_sensitivity, PRIVATE_SOURCES
+from cascade_memory import MemoryClient
+from cascade_ingest.consent import ConsentConfig, set_consent
+from cascade_ingest.permissions import classify_sensitivity, PRIVATE_SOURCES
 
 logger = logging.getLogger(__name__)
 
